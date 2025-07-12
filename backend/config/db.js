@@ -1,5 +1,5 @@
 // Import Mongoose
-import mongoose from "mongooe";
+import mongoose from "mongoose";
 
 // Define connectDB Async Function
 export const connectDB = async () => {

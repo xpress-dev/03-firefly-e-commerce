@@ -43,10 +43,10 @@ const productSchema = new mongoose.Schema(
         },
         message: "Product must have at least one size",
       },
-      description: {
-        type: String,
-        maxlength: 500,
-      },
+    },
+    description: {
+      type: String,
+      maxlength: 500,
     },
   },
   {
