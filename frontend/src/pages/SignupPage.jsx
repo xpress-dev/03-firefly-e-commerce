@@ -17,7 +17,7 @@ import useEcommerceStore from "../store/FireflyStore";
 
 const SignupPage = () => {
   const navigate = useNavigate();
-  const { register, authLoading, authError, isAuthenticated } =
+  const { register, authLoading, authError, isAuthenticated, clearAuthError } =
     useEcommerceStore();
 
   const [formData, setFormData] = useState({
@@ -47,6 +47,11 @@ const SignupPage = () => {
       navigate("/dashboard", { replace: true });
     }
   }, [isAuthenticated, navigate]);
+
+  // Clear auth errors on mount
+  useEffect(() => {
+    clearAuthError();
+  }, [clearAuthError]);
 
   // Check password strength
   useEffect(() => {
@@ -601,12 +606,12 @@ const SignupPage = () => {
           </div>
 
           {/* Mobile Benefits Preview */}
-          <div className="lg:hidden mt-8 p-6 bg-gray-50 rounded-xl">
+          <div className="xl:hidden mt-8 p-6 bg-gray-50 rounded-xl">
             <h3 className="font-semibold text-gray-900 mb-4">
               Member Benefits
             </h3>
             <div className="space-y-3">
-              {benefits.slice(0, 2).map((benefit, index) => (
+              {benefits.map((benefit, index) => (
                 <div key={index} className="flex items-center gap-3">
                   <benefit.icon className="text-orange-500 text-xl" />
                   <span className="text-sm text-gray-600">{benefit.title}</span>

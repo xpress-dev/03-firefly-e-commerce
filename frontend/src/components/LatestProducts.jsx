@@ -86,20 +86,6 @@ const LatestProducts = () => {
     );
   }
 
-  const formatTimeAgo = (dateString) => {
-    const now = new Date();
-    const productDate = new Date(dateString);
-    const diffInHours = Math.floor((now - productDate) / (1000 * 60 * 60));
-
-    if (diffInHours < 24) {
-      return `${diffInHours}h ago`;
-    } else if (diffInHours < 168) {
-      return `${Math.floor(diffInHours / 24)}d ago`;
-    } else {
-      return `${Math.floor(diffInHours / 168)}w ago`;
-    }
-  };
-
   return (
     <section className="py-16 bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -136,15 +122,6 @@ const LatestProducts = () => {
                       NEW
                     </div>
                   </div>
-
-                  {/* Time Badge */}
-                  {product.createdAt && (
-                    <div className="absolute -top-2 -right-2 z-10">
-                      <div className="bg-blue-500 text-white text-xs font-medium px-2 py-1 rounded-full shadow-lg">
-                        {formatTimeAgo(product.createdAt)}
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             ))

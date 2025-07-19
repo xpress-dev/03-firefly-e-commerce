@@ -6,7 +6,7 @@ import Copyright from "./Copyright";
 const Footer = () => {
   return (
     <>
-      <footer className="flex justify-between flex-col sm:flex-row bg-gray-50 p-5 sm:p-10 md:p-15 lg:p-[2.5vw] rounded-t-2xl  gap-10 sm:gap-2">
+      <footer className="flex justify-between flex-col sm:flex-row bg-gray-50 p-5 sm:p-10 md:p-15 lg:p-[2.5vw] xl:px-[10vw] rounded-t-2xl  gap-10 sm:gap-2">
         <Logo />
 
         <div className="font-semibold">
@@ -18,11 +18,42 @@ const Footer = () => {
           <p>Email: dev@xpress-dev.xyz</p>
         </div>
         <div className="flex flex-col font-bold text-lg">
-          <Link to="/">Home</Link>
-          <Link to="/">Collections</Link>
-          <Link to="/">About Us</Link>
-          <Link to="/">Contact Us</Link>
-          <Link to="/">Terms of Service</Link>
+          <Link
+            to="/"
+            className="hover:text-orange-500 transition-colors cursor-pointer"
+          >
+            Home
+          </Link>
+          <Link
+            to="/collections"
+            className="hover:text-orange-500 transition-colors cursor-pointer"
+          >
+            Collections
+          </Link>
+          <Link
+            to="/"
+            className="hover:text-orange-500 transition-colors cursor-pointer"
+          >
+            About Us
+          </Link>
+          <Link
+            to="/"
+            className="hover:text-orange-500 transition-colors cursor-pointer"
+          >
+            Contact Us
+          </Link>
+          <Link
+            to="/terms"
+            className="hover:text-orange-500 transition-colors cursor-pointer"
+          >
+            Terms of Service
+          </Link>
+          <Link
+            to="/privacy"
+            className="hover:text-orange-500 transition-colors cursor-pointer"
+          >
+            Privacy Policy
+          </Link>
         </div>
       </footer>
       <Copyright />

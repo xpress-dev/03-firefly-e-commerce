@@ -29,7 +29,7 @@ const SortDropdown = ({ value, onChange, options, className = "" }) => {
     <div className={`relative ${className}`} ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-4 py-2 hover:border-gray-400 transition-colors min-w-[200px] justify-between"
+        className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-4 py-2 hover:border-gray-400 transition-colors min-w-[200px] justify-between cursor-pointer"
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >
@@ -53,7 +53,7 @@ const SortDropdown = ({ value, onChange, options, className = "" }) => {
               <button
                 key={option.value}
                 onClick={() => handleSelect(option)}
-                className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex items-center justify-between ${
+                className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex items-center justify-between cursor-pointer ${
                   value === option.value
                     ? "bg-orange-50 text-orange-700"
                     : "text-gray-700"

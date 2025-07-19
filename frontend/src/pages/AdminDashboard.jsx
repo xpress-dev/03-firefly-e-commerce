@@ -39,17 +39,12 @@ const AdminDashboard = () => {
     deleteUser,
     deleteProduct,
     updateOrderStatus,
-    adminLoading,
     adminError,
-    productsLoading,
-    ordersLoading,
   } = useEcommerceStore();
 
   const [activeTab, setActiveTab] = useState("overview");
   const [showUserModal, setShowUserModal] = useState(false);
-  const [showProductModal, setShowProductModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [selectedProduct, setSelectedProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [userFilter, setUserFilter] = useState("all");
   const [orderFilter, setOrderFilter] = useState("all");
@@ -86,7 +81,6 @@ const AdminDashboard = () => {
     if (window.confirm("Are you sure you want to delete this product?")) {
       try {
         await deleteProduct(productId);
-        setShowProductModal(false);
       } catch (error) {
         console.error("Error deleting product:", error);
       }
@@ -393,15 +387,7 @@ const AdminDashboard = () => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                               <div className="flex items-center space-x-2">
-                                <button
-                                  onClick={() => {
-                                    setSelectedProduct(product);
-                                    setShowProductModal(true);
-                                  }}
-                                  className="text-orange-600 hover:text-orange-900"
-                                >
-                                  <MdEdit />
-                                </button>
+                                {/* Edit button removed: setSelectedProduct/setShowProductModal no longer used */}
                                 <button
                                   onClick={() =>
                                     handleDeleteProduct(product._id)

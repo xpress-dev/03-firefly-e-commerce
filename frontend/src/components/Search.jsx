@@ -25,11 +25,11 @@ const Search = () => {
   const [localQuery, setLocalQuery] = useState("");
   const [searchHistory, setSearchHistory] = useState([]);
   const [recentSearches] = useState([
-    "Men's Shirts",
-    "Women's Shoes",
-    "Casual Wear",
-    "Formal Suits",
-    "T-Shirts",
+    "T-Shirt",
+    "Unisex",
+    "Cotton",
+    "Formal",
+    "Shirt",
   ]);
 
   const searchRef = useRef(null);
@@ -88,8 +88,8 @@ const Search = () => {
     setSearchHistory(newHistory);
     localStorage.setItem("searchHistory", JSON.stringify(newHistory));
 
-    // Navigate to collections with search filter
-    setFilters({ search: query });
+    // Navigate to collections with search filter (clear other filters)
+    setFilters({ search: query }, true);
     navigate("/collections");
     closeSearch();
   };
@@ -106,7 +106,7 @@ const Search = () => {
   if (!isSearchOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-50">
+    <div className="fixed inset-0 z-50 bg-black/50 bg-opacity-50">
       <div
         className="max-w-2xl mx-auto mt-20 bg-white rounded-xl shadow-2xl overflow-hidden"
         ref={searchRef}
@@ -132,7 +132,7 @@ const Search = () => {
             </div>
             <button
               onClick={closeSearch}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
             >
               <MdClose className="text-xl text-gray-600" />
             </button>
@@ -143,14 +143,14 @@ const Search = () => {
             <div className="flex items-center gap-2 mt-4">
               <button
                 onClick={() => handleSearchSubmit(localQuery)}
-                className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2"
+                className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2 cursor-pointer"
               >
                 <MdSearch />
                 Search "{localQuery}"
               </button>
               <button
                 onClick={() => setLocalQuery("")}
-                className="text-gray-500 hover:text-gray-700 p-2"
+                className="text-gray-500 hover:text-gray-700 p-2 cursor-pointer"
               >
                 <MdClear />
               </button>
@@ -181,9 +181,9 @@ const Search = () => {
               {searchResults.map((product) => (
                 <Link
                   key={product._id}
-                  to={`/product/${product._id}`}
+                  to={`/product/${product.slug}`}
                   onClick={handleProductClick}
-                  className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors"
+                  className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
                 >
                   <img
                     src={product.images[0] || "/placeholder-image.svg"}
@@ -212,7 +212,7 @@ const Search = () => {
                 <div className="pt-4 border-t border-gray-100">
                   <button
                     onClick={() => handleSearchSubmit(localQuery)}
-                    className="w-full text-orange-500 hover:text-orange-600 font-medium py-2"
+                    className="w-full text-orange-500 hover:text-orange-600 font-medium py-2 cursor-pointer"
                   >
                     View all results for "{localQuery}"
                   </button>
@@ -228,7 +228,7 @@ const Search = () => {
               </p>
               <button
                 onClick={() => handleSearchSubmit(localQuery)}
-                className="text-orange-500 hover:text-orange-600 font-medium"
+                className="text-orange-500 hover:text-orange-600 font-medium cursor-pointer"
               >
                 Search in all products
               </button>
@@ -246,7 +246,7 @@ const Search = () => {
                     </h3>
                     <button
                       onClick={clearSearchHistory}
-                      className="text-sm text-gray-500 hover:text-gray-700"
+                      className="text-sm text-gray-500 hover:text-gray-700 cursor-pointer"
                     >
                       Clear
                     </button>
@@ -256,7 +256,7 @@ const Search = () => {
                       <button
                         key={index}
                         onClick={() => setLocalQuery(item)}
-                        className="w-full text-left p-2 hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-3"
+                        className="w-full text-left p-2 hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-3 cursor-pointer"
                       >
                         <MdHistory className="text-gray-400" />
                         <span className="text-gray-700">{item}</span>
@@ -277,7 +277,7 @@ const Search = () => {
                     <button
                       key={index}
                       onClick={() => setLocalQuery(item)}
-                      className="px-3 py-2 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+                      className="px-3 py-2 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors cursor-pointer"
                     >
                       {item}
                     </button>
@@ -292,22 +292,26 @@ const Search = () => {
                 </h3>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    "Men's Fashion",
-                    "Women's Fashion",
-                    "Shoes",
-                    "Accessories",
-                  ].map((category) => (
+                    { name: "Men's Fashion", category: "", gender: "Men" },
+                    { name: "Women's Fashion", category: "", gender: "Women" },
+                    { name: "Shoes", category: "Shoes", gender: "" },
+                    { name: "Unisex Products", category: "", gender: "Unisex" },
+                  ].map((item) => (
                     <Link
-                      key={category}
+                      key={item.name}
                       to="/collections"
                       onClick={() => {
-                        setFilters({ category: category.split("'s")[0] });
+                        // Clear all filters first, then apply new ones
+                        const filters = {};
+                        if (item.category) filters.category = item.category;
+                        if (item.gender) filters.gender = item.gender;
+                        setFilters(filters, true); // Add true to clear previous filters
                         closeSearch();
                       }}
-                      className="p-3 border border-gray-200 rounded-lg hover:border-orange-300 hover:bg-orange-50 transition-colors text-center"
+                      className="p-3 border border-gray-200 rounded-lg hover:border-orange-300 hover:bg-orange-50 transition-colors text-center cursor-pointer"
                     >
                       <span className="text-gray-700 font-medium">
-                        {category}
+                        {item.name}
                       </span>
                     </Link>
                   ))}

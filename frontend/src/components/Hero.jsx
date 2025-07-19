@@ -7,7 +7,7 @@ const Hero = () => {
       <div className="relative h-[60vh] md:h-[70vh] lg:h-[80vh] mt-2 group">
         {/* Background Image with Overlay */}
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1483181957632-8bda974cbc91?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')] bg-cover bg-center bg-no-repeat rounded-2xl transition-all duration-1000 ease-in-out group-hover:bg-[url('https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')]">
-          <div className="absolute inset-0 bg-black/30 rounded-2xl"></div>
+          <div className="absolute inset-0 bg-black/70 rounded-2xl"></div>
         </div>
 
         {/* Content Overlay */}

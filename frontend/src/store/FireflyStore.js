@@ -148,6 +148,10 @@ const useEcommerceStore = create(
         });
       },
 
+      clearAuthError: () => {
+        set({ authError: null });
+      },
+
       getUserProfile: async () => {
         set({ authLoading: true, authError: null });
         try {
@@ -197,10 +201,20 @@ const useEcommerceStore = create(
           queryParams.append("page", params.page || get().pagination.page);
           queryParams.append("limit", params.limit || get().pagination.limit);
 
+          // Add sort param if provided
+          if (params.sort) {
+            queryParams.append("sort", params.sort);
+          }
+
           // Add filter params
           const filters = { ...get().filters, ...params };
           Object.entries(filters).forEach(([key, value]) => {
-            if (value !== "" && value !== null && value !== undefined) {
+            if (
+              value !== "" &&
+              value !== null &&
+              value !== undefined &&
+              key !== "sort"
+            ) {
               queryParams.append(key, value);
             }
           });
@@ -518,9 +532,19 @@ const useEcommerceStore = create(
       },
 
       // UTILITY ACTIONS
-      setFilters: (newFilters) => {
+      setFilters: (newFilters, clearPrevious = false) => {
         set((state) => ({
-          filters: { ...state.filters, ...newFilters },
+          filters: clearPrevious
+            ? {
+                category: "",
+                gender: "",
+                minPrice: "",
+                maxPrice: "",
+                search: "",
+                inStock: null,
+                ...newFilters,
+              }
+            : { ...state.filters, ...newFilters },
         }));
       },
 

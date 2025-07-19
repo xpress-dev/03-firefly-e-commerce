@@ -13,19 +13,15 @@ const ProductCard = ({ product }) => {
   const { addToCart, openCart } = useEcommerceStore();
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
-  const [isFavorited, setIsFavorited] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleMouseEnter = () => {
-    setIsHovered(true);
     if (product.images && product.images.length > 1) {
       setCurrentImageIndex(1);
     }
   };
 
   const handleMouseLeave = () => {
-    setIsHovered(false);
     setCurrentImageIndex(0);
   };
 
@@ -50,27 +46,11 @@ const ProductCard = ({ product }) => {
     }
   };
 
-  const toggleFavorite = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsFavorited(!isFavorited);
-    // TODO: Implement actual favorite functionality
-  };
-
-  const handleQuickView = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    // TODO: Implement quick view modal
-  };
-
   if (!product) {
     return null;
   }
 
   const hasMultipleImages = product.images && product.images.length > 1;
-  const rating = product.rating || 4.5; // Default rating if not available
-  const reviewCount =
-    product.reviewCount || Math.floor(Math.random() * 100) + 10;
 
   return (
     <Link
@@ -79,7 +59,7 @@ const ProductCard = ({ product }) => {
     >
       {/* Image Container */}
       <div
-        className="relative overflow-hidden aspect-square"
+        className="relative overflow-hidden "
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
@@ -108,47 +88,6 @@ const ProductCard = ({ product }) => {
           )}
         </div>
 
-        {/* Overlay Actions */}
-        <div
-          className={`absolute inset-0 bg-black/30 flex items-center justify-center gap-3 transition-all duration-300 ${
-            isHovered ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          <button
-            onClick={handleQuickView}
-            className="bg-white/90 p-3 rounded-full hover:bg-white transform hover:scale-110 transition-all duration-200 shadow-lg"
-            title="Quick View"
-          >
-            <MdRemoveRedEye className="text-xl text-gray-800" />
-          </button>
-
-          <button
-            onClick={handleAddToCart}
-            disabled={isLoading}
-            className="bg-orange-500 text-white p-3 rounded-full hover:bg-orange-600 transform hover:scale-110 transition-all duration-200 shadow-lg disabled:opacity-70"
-            title="Add to Cart"
-          >
-            {isLoading ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            ) : (
-              <MdShoppingCart className="text-xl" />
-            )}
-          </button>
-        </div>
-
-        {/* Favorite Button */}
-        <button
-          onClick={toggleFavorite}
-          className="absolute top-4 right-4 bg-white/90 p-2 rounded-full hover:bg-white transform hover:scale-110 transition-all duration-200 shadow-lg z-10"
-          title={isFavorited ? "Remove from favorites" : "Add to favorites"}
-        >
-          {isFavorited ? (
-            <MdFavorite className="text-lg text-red-500" />
-          ) : (
-            <MdFavoriteBorder className="text-lg text-gray-600" />
-          )}
-        </button>
-
         {/* Stock Badge */}
         {product.inventory <= 5 && product.inventory > 0 && (
           <div className="absolute top-4 left-4 bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full">
@@ -172,28 +111,6 @@ const ProductCard = ({ product }) => {
         <h3 className="font-semibold text-gray-900 text-lg leading-tight line-clamp-2 group-hover:text-orange-600 transition-colors">
           {product.name}
         </h3>
-
-        {/* Rating */}
-        <div className="flex items-center gap-2">
-          <div className="flex text-yellow-400">
-            {[...Array(5)].map((_, i) => (
-              <MdStar
-                key={i}
-                className={`text-sm ${
-                  i < Math.floor(rating) ? "text-yellow-400" : "text-gray-300"
-                }`}
-              />
-            ))}
-          </div>
-          <span className="text-sm text-gray-600">({reviewCount})</span>
-        </div>
-
-        {/* Category */}
-        {product.category && (
-          <span className="inline-block bg-gray-100 text-gray-600 text-xs font-medium px-3 py-1 rounded-full">
-            {product.category}
-          </span>
-        )}
 
         {/* Price */}
         <div className="flex items-center justify-between">
@@ -225,7 +142,7 @@ const ProductCard = ({ product }) => {
         <button
           onClick={handleAddToCart}
           disabled={product.inventory === 0 || isLoading}
-          className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-xl font-semibold hover:from-orange-600 hover:to-red-600 transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
+          className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-xl font-semibold hover:from-orange-600 hover:to-red-600 transform hover:scale-105 transition-all duration-300 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
         >
           {isLoading ? (
             <>

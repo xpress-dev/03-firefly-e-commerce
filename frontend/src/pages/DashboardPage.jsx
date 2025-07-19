@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   MdDashboard,
   MdShoppingBag,
   MdPerson,
   MdLocationOn,
-  MdSecurity,
   MdLogout,
   MdEdit,
   MdVisibility,
@@ -13,17 +12,18 @@ import {
   MdPayment,
   MdStar,
   MdTrendingUp,
-  MdNotifications,
   MdSettings,
   MdHistory,
   MdFavorite,
   MdShoppingCart,
   MdReceipt,
+  MdSecurity,
 } from "react-icons/md";
 import useEcommerceStore from "../store/FireflyStore";
 
 const DashboardPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     user,
     isAuthenticated,
@@ -32,17 +32,14 @@ const DashboardPage = () => {
     getMyOrders,
     ordersLoading,
     cartItemsCount,
-    updateUserProfile,
-    authLoading,
   } = useEcommerceStore();
 
-  const [activeTab, setActiveTab] = useState("overview");
+  // Get tab from URL params or default to overview
+  const urlParams = new URLSearchParams(location.search);
+  const tabFromUrl = urlParams.get("tab") || "overview";
+
+  const [activeTab, setActiveTab] = useState(tabFromUrl);
   const [greeting, setGreeting] = useState("");
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [profileForm, setProfileForm] = useState({
-    name: "",
-    email: "",
-  });
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -53,50 +50,23 @@ const DashboardPage = () => {
     // Fetch user orders
     getMyOrders();
 
-    // Initialize profile form with user data
-    if (user) {
-      setProfileForm({
-        name: user.name || "",
-        email: user.email || "",
-      });
-    }
-
     // Set greeting based on time
     const hour = new Date().getHours();
     if (hour < 12) setGreeting("Good morning");
     else if (hour < 17) setGreeting("Good afternoon");
     else setGreeting("Good evening");
-  }, [isAuthenticated, navigate, getMyOrders, user]);
+  }, [isAuthenticated, navigate, getMyOrders]);
+
+  // Update active tab when URL changes
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const tabFromUrl = urlParams.get("tab") || "overview";
+    setActiveTab(tabFromUrl);
+  }, [location.search]);
 
   const handleLogout = () => {
     logout();
     navigate("/");
-  };
-
-  const handleProfileFormChange = (e) => {
-    const { name, value } = e.target;
-    setProfileForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleProfileSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await updateUserProfile(profileForm);
-      setIsEditingProfile(false);
-    } catch (error) {
-      console.error("Error updating profile:", error);
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setProfileForm({
-      name: user?.name || "",
-      email: user?.email || "",
-    });
-    setIsEditingProfile(false);
   };
 
   const getOrderStats = () => {
@@ -145,8 +115,6 @@ const DashboardPage = () => {
     { id: "orders", label: "My Orders", icon: MdShoppingBag },
     { id: "profile", label: "Profile", icon: MdPerson },
     { id: "addresses", label: "Addresses", icon: MdLocationOn },
-    { id: "security", label: "Security", icon: MdSecurity },
-    { id: "notifications", label: "Notifications", icon: MdNotifications },
   ];
 
   const quickActions = [
@@ -158,9 +126,9 @@ const DashboardPage = () => {
       color: "bg-blue-500",
     },
     {
-      title: "Update Profile",
-      description: "Manage your personal information",
-      icon: MdEdit,
+      title: "View Profile",
+      description: "View your account details",
+      icon: MdPerson,
       action: () => setActiveTab("profile"),
       color: "bg-green-500",
     },
@@ -474,105 +442,255 @@ const DashboardPage = () => {
     </div>
   );
 
-  const renderProfile = () => (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">Profile Settings</h2>
+  const renderProfile = () => {
+    const memberSince = user?.createdAt
+      ? new Date(user.createdAt).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      : "Not available";
 
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Personal Information
-        </h3>
+    const totalOrdersCount = myOrders?.length || 0;
+    const completedOrders =
+      myOrders?.filter((order) => order.status === "Delivered")?.length || 0;
+    const totalSpent =
+      myOrders?.reduce((sum, order) => sum + (order.totalAmount || 0), 0) || 0;
 
-        {isEditingProfile ? (
-          <form onSubmit={handleProfileSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <MdPerson className="text-orange-500" />
+          Account Profile
+        </h2>
+
+        {/* Profile Header Card */}
+        <div className="bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl p-6">
+          <div className="flex items-center space-x-4">
+            <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+              <MdPerson className="text-3xl text-white" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold">{user?.name || "User"}</h3>
+              <p className="text-orange-100">
+                {user?.email || "No email provided"}
+              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                <span className="text-sm text-orange-100">Active Member</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Account Information */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Personal Information */}
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <MdPerson className="text-orange-500" />
+              Personal Information
+            </h3>
+
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-500 mb-1">
                   Full Name
                 </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={profileForm.name}
-                  onChange={handleProfileFormChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  required
-                />
+                <div className="text-gray-900 font-medium">
+                  {user?.name || "Not provided"}
+                </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email
+                <label className="block text-sm font-medium text-gray-500 mb-1">
+                  Email Address
                 </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={profileForm.email}
-                  onChange={handleProfileFormChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="mt-6 flex space-x-4">
-              <button
-                type="submit"
-                disabled={authLoading}
-                className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50"
-              >
-                {authLoading ? "Saving..." : "Save Changes"}
-              </button>
-              <button
-                type="button"
-                onClick={handleCancelEdit}
-                className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  value={user?.name || ""}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-                  readOnly
-                />
+                <div className="text-gray-900 font-medium">
+                  {user?.email || "Not provided"}
+                </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email
+                <label className="block text-sm font-medium text-gray-500 mb-1">
+                  Account Type
                 </label>
-                <input
-                  type="email"
-                  value={user?.email || ""}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-                  readOnly
-                />
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      user?.role === "admin"
+                        ? "bg-purple-100 text-purple-700"
+                        : "bg-blue-100 text-blue-700"
+                    }`}
+                  >
+                    {user?.role === "admin" ? "Administrator" : "Customer"}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-1">
+                  Member Since
+                </label>
+                <div className="text-gray-900 font-medium">{memberSince}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Account Statistics */}
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <MdTrendingUp className="text-orange-500" />
+              Account Statistics
+            </h3>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <MdReceipt className="text-blue-500" />
+                  <span className="text-gray-700">Total Orders</span>
+                </div>
+                <span className="font-semibold text-gray-900">
+                  {totalOrdersCount}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <MdLocalShipping className="text-green-500" />
+                  <span className="text-gray-700">Completed Orders</span>
+                </div>
+                <span className="font-semibold text-gray-900">
+                  {completedOrders}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <MdPayment className="text-orange-500" />
+                  <span className="text-gray-700">Total Spent</span>
+                </div>
+                <span className="font-semibold text-gray-900">
+                  ${totalSpent.toFixed(2)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <MdShoppingCart className="text-purple-500" />
+                  <span className="text-gray-700">Items in Cart</span>
+                </div>
+                <span className="font-semibold text-gray-900">
+                  {cartItemsCount}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Account Status & Security */}
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <MdSecurity className="text-orange-500" />
+            Account Security & Status
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <h4 className="font-medium text-gray-900">Account Status</h4>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">Account Active</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">Email Verified</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">
+                    Regular Customer
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="mt-6">
-              <button
-                onClick={() => setIsEditingProfile(true)}
-                className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition-colors"
-              >
-                Edit Profile
-              </button>
+            <div className="space-y-3">
+              <h4 className="font-medium text-gray-900">
+                Security Information
+              </h4>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">
+                    Secure Password Set
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">
+                    Two-Factor Authentication: Disabled
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">
+                    Account Recovery Enabled
+                  </span>
+                </div>
+              </div>
             </div>
-          </>
-        )}
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <MdSettings className="text-orange-500" />
+            Quick Actions
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <button
+              onClick={() => setActiveTab("orders")}
+              className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left"
+            >
+              <MdHistory className="text-xl text-blue-500" />
+              <div>
+                <div className="font-medium text-gray-900">Order History</div>
+                <div className="text-sm text-gray-500">
+                  View all your orders
+                </div>
+              </div>
+            </button>
+
+            <Link
+              to="/collections"
+              className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left"
+            >
+              <MdShoppingBag className="text-xl text-green-500" />
+              <div>
+                <div className="font-medium text-gray-900">Shop Now</div>
+                <div className="text-sm text-gray-500">Browse our products</div>
+              </div>
+            </Link>
+
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-red-50 transition-colors text-left"
+            >
+              <MdLogout className="text-xl text-red-500" />
+              <div>
+                <div className="font-medium text-gray-900">Sign Out</div>
+                <div className="text-sm text-gray-500">Logout from account</div>
+              </div>
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (!isAuthenticated) {
     return (
@@ -607,18 +725,6 @@ const DashboardPage = () => {
         return (
           <div className="text-center py-12 text-gray-500">
             Address management coming soon...
-          </div>
-        );
-      case "security":
-        return (
-          <div className="text-center py-12 text-gray-500">
-            Security settings coming soon...
-          </div>
-        );
-      case "notifications":
-        return (
-          <div className="text-center py-12 text-gray-500">
-            Notification preferences coming soon...
           </div>
         );
       default:

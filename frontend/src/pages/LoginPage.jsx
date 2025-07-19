@@ -15,7 +15,7 @@ import useEcommerceStore from "../store/FireflyStore";
 const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, authLoading, authError, isAuthenticated } =
+  const { login, authLoading, authError, isAuthenticated, clearAuthError } =
     useEcommerceStore();
 
   const [formData, setFormData] = useState({
@@ -33,6 +33,11 @@ const LoginPage = () => {
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, navigate, location]);
+
+  // Clear auth errors on mount
+  useEffect(() => {
+    clearAuthError();
+  }, [clearAuthError]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -89,12 +94,12 @@ const LoginPage = () => {
       // Navigate based on user role and intended destination
       const from = location.state?.from?.pathname;
       let redirectTo = "/dashboard"; // default for regular users
-      
+
       // Check if user is admin and redirect accordingly
       if (response?.data?.role === "admin") {
         redirectTo = "/admin";
       }
-      
+
       // If there was an intended destination, use that instead (unless it's login/signup)
       if (from && from !== "/login" && from !== "/signup") {
         redirectTo = from;
@@ -340,12 +345,12 @@ const LoginPage = () => {
           </div>
 
           {/* Mobile Features Preview */}
-          <div className="lg:hidden mt-8 p-6 bg-gray-50 rounded-xl">
+          <div className="xl:hidden mt-8 p-6 bg-gray-50 rounded-xl">
             <h3 className="font-semibold text-gray-900 mb-4">
               Why join Firefly?
             </h3>
             <div className="space-y-3">
-              {features.slice(0, 2).map((feature, index) => (
+              {features.map((feature, index) => (
                 <div key={index} className="flex items-center gap-3">
                   <feature.icon className="text-orange-500 text-xl" />
                   <span className="text-sm text-gray-600">{feature.title}</span>

@@ -45,6 +45,7 @@ export const getProducts = async (req, res) => {
       maxPrice,
       search,
       inStock,
+      sort,
     } = req.query;
 
     // Build filter object
@@ -65,12 +66,24 @@ export const getProducts = async (req, res) => {
     }
     if (inStock === "true") filter.inventory = { $gt: 0 };
 
+    // Build sort object
+    let sortObj = { createdAt: -1 }; // default sort
+    if (sort) {
+      if (sort === "createdAt" || sort === "-createdAt") {
+        sortObj = sort === "createdAt" ? { createdAt: 1 } : { createdAt: -1 };
+      } else if (sort === "price" || sort === "-price") {
+        sortObj = sort === "price" ? { price: 1 } : { price: -1 };
+      } else if (sort === "name" || sort === "-name") {
+        sortObj = sort === "name" ? { name: 1 } : { name: -1 };
+      }
+    }
+
     // Calculate pagination
     const skip = (page - 1) * limit;
 
     // Get products with pagination
     const products = await Product.find(filter)
-      .sort({ createdAt: -1 })
+      .sort(sortObj)
       .limit(limit * 1)
       .skip(skip);
 

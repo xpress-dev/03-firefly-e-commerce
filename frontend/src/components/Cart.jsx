@@ -52,6 +52,16 @@ const Cart = () => {
     setTimeout(() => setIsAnimating(false), 300);
   };
 
+  // Auto-close cart when it becomes empty
+  useEffect(() => {
+    if (isCartOpen && cartItems.length === 0) {
+      const timer = setTimeout(() => {
+        closeCart();
+      }, 500); // Small delay to allow animation
+      return () => clearTimeout(timer);
+    }
+  }, [isCartOpen, cartItems.length, closeCart]);
+
   const handleRemoveItem = (itemId) => {
     setIsAnimating(true);
     removeFromCart(itemId);
@@ -127,21 +137,31 @@ const Cart = () => {
                   >
                     <div className="flex gap-4">
                       {/* Product Image */}
-                      <div className="w-16 h-16 bg-white rounded-lg overflow-hidden flex-shrink-0">
+                      <Link
+                        to={`/product/${item.product.slug}`}
+                        className="w-16 h-16 bg-white rounded-lg overflow-hidden flex-shrink-0 cursor-pointer"
+                        onClick={closeCart}
+                      >
                         <img
                           src={
                             item.product.images[0] || "/placeholder-image.svg"
                           }
                           alt={item.product.name}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover hover:scale-105 transition-transform"
                         />
-                      </div>
+                      </Link>
 
                       {/* Product Details */}
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-gray-900 truncate">
-                          {item.product.name}
-                        </h4>
+                        <Link
+                          to={`/product/${item.product.slug}`}
+                          onClick={closeCart}
+                          className="cursor-pointer"
+                        >
+                          <h4 className="font-medium text-gray-900 truncate hover:text-orange-600 transition-colors">
+                            {item.product.name}
+                          </h4>
+                        </Link>
                         <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
                           <span>${item.product.price}</span>
                           {item.size && (
@@ -159,8 +179,7 @@ const Cart = () => {
                               onClick={() =>
                                 handleQuantityChange(item.id, item.quantity - 1)
                               }
-                              className="p-1 hover:bg-gray-200 rounded transition-colors"
-                              disabled={item.quantity <= 1}
+                              className="p-1 hover:bg-gray-200 rounded transition-colors cursor-pointer"
                             >
                               <MdRemove className="text-gray-600" />
                             </button>

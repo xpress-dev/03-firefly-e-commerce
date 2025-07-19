@@ -112,12 +112,6 @@ const BestSellers = () => {
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 <ProductCard product={product} />
-                {/* Best Seller Badge */}
-                <div className="relative -mt-4 z-10">
-                  <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-3 py-1 rounded-full mx-auto w-fit shadow-lg">
-                    #{index + 1} Best Seller
-                  </div>
-                </div>
               </div>
             ))
           ) : (

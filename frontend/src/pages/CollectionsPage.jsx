@@ -34,7 +34,7 @@ const CollectionsPage = () => {
   const [expandedFilters, setExpandedFilters] = useState({
     category: true,
     gender: true,
-    price: true,
+    price: false,
     stock: false,
   });
   const [sortBy, setSortBy] = useState("newest");
@@ -149,7 +149,7 @@ const CollectionsPage = () => {
 
   // Filter Component
   const FilterSection = ({ isMobile = false }) => (
-    <div className={`${isMobile ? "p-6" : "space-y-6"}`}>
+    <div className={`${isMobile ? "p-6 space-y-6" : "space-y-6"}`}>
       {/* Search Filter */}
       <div className="space-y-3">
         <h3 className="font-semibold text-gray-900 flex items-center gap-2">
@@ -172,7 +172,7 @@ const CollectionsPage = () => {
       <div className="space-y-3">
         <button
           onClick={() => toggleFilterExpansion("category")}
-          className="w-full flex items-center justify-between font-semibold text-gray-900"
+          className="w-full flex items-center justify-between font-semibold text-gray-900 cursor-pointer"
         >
           <span className="flex items-center gap-2">
             <MdFilterList className="text-lg" />
@@ -219,7 +219,7 @@ const CollectionsPage = () => {
       <div className="space-y-3">
         <button
           onClick={() => toggleFilterExpansion("gender")}
-          className="w-full flex items-center justify-between font-semibold text-gray-900"
+          className="w-full flex items-center justify-between font-semibold text-gray-900 cursor-pointer"
         >
           <span>Gender</span>
           {expandedFilters.gender ? <MdExpandLess /> : <MdExpandMore />}
@@ -261,7 +261,7 @@ const CollectionsPage = () => {
       <div className="space-y-3">
         <button
           onClick={() => toggleFilterExpansion("price")}
-          className="w-full flex items-center justify-between font-semibold text-gray-900"
+          className="w-full flex items-center justify-between font-semibold text-gray-900 cursor-pointer"
         >
           <span>Price Range</span>
           {expandedFilters.price ? <MdExpandLess /> : <MdExpandMore />}
@@ -288,7 +288,7 @@ const CollectionsPage = () => {
       <div className="space-y-3">
         <button
           onClick={() => toggleFilterExpansion("stock")}
-          className="w-full flex items-center justify-between font-semibold text-gray-900"
+          className="w-full flex items-center justify-between font-semibold text-gray-900 cursor-pointer"
         >
           <span>Availability</span>
           {expandedFilters.stock ? <MdExpandLess /> : <MdExpandMore />}
@@ -324,7 +324,7 @@ const CollectionsPage = () => {
       {/* Clear Filters */}
       <button
         onClick={handleClearFilters}
-        className="w-full bg-gray-100 text-gray-700 py-3 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+        className="w-full bg-gray-100 text-gray-700 py-3 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 cursor-pointer"
       >
         <MdClear />
         Clear All Filters
@@ -370,7 +370,7 @@ const CollectionsPage = () => {
                 <h2 className="text-2xl font-bold text-gray-900">Products</h2>
                 <button
                   onClick={() => setShowMobileFilters(true)}
-                  className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200"
+                  className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200 cursor-pointer"
                 >
                   <MdFilterList />
                   Filters
@@ -406,7 +406,7 @@ const CollectionsPage = () => {
                   <div className="hidden sm:flex border border-gray-300 rounded-lg overflow-hidden">
                     <button
                       onClick={() => setIsGridView(true)}
-                      className={`p-2 ${
+                      className={`p-2 cursor-pointer ${
                         isGridView
                           ? "bg-orange-500 text-white"
                           : "bg-white text-gray-600"
@@ -416,7 +416,7 @@ const CollectionsPage = () => {
                     </button>
                     <button
                       onClick={() => setIsGridView(false)}
-                      className={`p-2 ${
+                      className={`p-2 cursor-pointer ${
                         !isGridView
                           ? "bg-orange-500 text-white"
                           : "bg-white text-gray-600"
@@ -445,7 +445,7 @@ const CollectionsPage = () => {
                 <p className="text-gray-600 mb-4">{productsError}</p>
                 <button
                   onClick={loadProducts}
-                  className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition-colors"
+                  className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition-colors cursor-pointer"
                 >
                   Try Again
                 </button>
@@ -465,7 +465,7 @@ const CollectionsPage = () => {
                 </p>
                 <button
                   onClick={handleClearFilters}
-                  className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition-colors"
+                  className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition-colors cursor-pointer"
                 >
                   Clear Filters
                 </button>
@@ -479,7 +479,7 @@ const CollectionsPage = () => {
                   <button
                     onClick={() => handlePageChange(pagination.page - 1)}
                     disabled={pagination.page === 1}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Previous
                   </button>
@@ -499,7 +499,7 @@ const CollectionsPage = () => {
                         <button
                           key={pageNumber}
                           onClick={() => handlePageChange(pageNumber)}
-                          className={`px-4 py-2 rounded-lg ${
+                          className={`px-4 py-2 rounded-lg cursor-pointer ${
                             isCurrentPage
                               ? "bg-orange-500 text-white"
                               : "border border-gray-300 text-gray-600 hover:bg-gray-50"
@@ -524,7 +524,7 @@ const CollectionsPage = () => {
                   <button
                     onClick={() => handlePageChange(pagination.page + 1)}
                     disabled={pagination.page === pagination.totalPages}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Next
                   </button>
@@ -539,7 +539,7 @@ const CollectionsPage = () => {
       {showMobileFilters && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div
-            className="absolute inset-0 bg-black bg-opacity-50"
+            className="absolute inset-0 bg-black/50 bg-opacity-50"
             onClick={() => setShowMobileFilters(false)}
           />
           <div className="absolute right-0 top-0 h-full w-80 bg-white shadow-xl">
@@ -547,7 +547,7 @@ const CollectionsPage = () => {
               <h2 className="text-xl font-bold">Filters</h2>
               <button
                 onClick={() => setShowMobileFilters(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg"
+                className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer"
               >
                 <MdClose className="text-xl" />
               </button>

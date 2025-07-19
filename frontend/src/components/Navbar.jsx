@@ -6,6 +6,12 @@ import {
   CgMenu,
   CgClose,
 } from "react-icons/cg";
+import {
+  MdDashboard,
+  MdShoppingBag,
+  MdSettings,
+  MdLogout,
+} from "react-icons/md";
 import { Link } from "react-router-dom";
 import Logo from "./Logo";
 import Cart from "./Cart";
@@ -53,7 +59,7 @@ const Navbar = () => {
           {/* Search */}
           <button
             onClick={handleSearchClick}
-            className="relative p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="relative p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
             title="Search"
           >
             <CgSearch />
@@ -62,7 +68,7 @@ const Navbar = () => {
           {/* Cart */}
           <button
             onClick={handleCartClick}
-            className="relative p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="relative p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
             title="Shopping Cart"
           >
             <CgShoppingCart />
@@ -90,41 +96,40 @@ const Navbar = () => {
                 <div className="py-2">
                   <Link
                     to="/dashboard"
-                    className="block px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-2 px-4 py-3 text-gray-700 text-sm hover:bg-orange-50 hover:text-orange-600 transition-colors"
                   >
+                    <MdDashboard className="text-lg" />
                     Dashboard
                   </Link>
                   <Link
-                    to="/dashboard"
-                    onClick={() => {
-                      /* Set active tab to orders */
-                    }}
-                    className="block px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
+                    to="/dashboard?tab=orders"
+                    className="flex items-center gap-2 px-4 py-3 text-gray-700 text-sm hover:bg-orange-50 hover:text-orange-600 transition-colors"
                   >
+                    <MdShoppingBag className="text-lg" />
                     My Orders
                   </Link>
                   <Link
-                    to="/dashboard"
-                    onClick={() => {
-                      /* Set active tab to profile */
-                    }}
-                    className="block px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
+                    to="/dashboard?tab=profile"
+                    className="flex items-center gap-2 px-4 py-3 text-gray-700 text-sm hover:bg-orange-50 hover:text-orange-600 transition-colors"
                   >
-                    My Profile
+                    <CgProfile className="text-lg" />
+                    View Profile
                   </Link>
                   {user?.role === "admin" && (
                     <Link
                       to="/admin"
-                      className="block px-4 py-2 text-purple-700 hover:bg-purple-50 transition-colors font-medium"
+                      className="flex items-center gap-2 px-4 py-3 text-purple-700 text-sm hover:bg-purple-50 transition-colors font-medium"
                     >
+                      <MdSettings className="text-lg" />
                       Admin Dashboard
                     </Link>
                   )}
                   <hr className="my-2" />
                   <button
                     onClick={handleLogout}
-                    className="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 transition-colors"
+                    className="flex items-center gap-2 w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 transition-colors text-sm cursor-pointer"
                   >
+                    <MdLogout className="text-lg" />
                     Logout
                   </button>
                 </div>
@@ -132,7 +137,7 @@ const Navbar = () => {
             </div>
           ) : (
             <Link
-              className="text-white bg-black rounded-2xl px-4 py-2 font-semibold text-sm hover:bg-gray-800 transition-colors"
+              className="text-white bg-gradient-to-r from-orange-500 to-red-600  rounded-2xl px-4 py-2 font-semibold text-sm"
               to="/login"
             >
               Login
@@ -159,7 +164,7 @@ const Navbar = () => {
               {/* Mobile Search */}
               <button
                 onClick={handleSearchClick}
-                className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors"
+                className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
               >
                 <CgSearch className="text-xl" />
                 <span>Search Products</span>
@@ -168,7 +173,7 @@ const Navbar = () => {
               {/* Mobile Cart */}
               <button
                 onClick={handleCartClick}
-                className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors"
+                className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
               >
                 <div className="relative">
                   <CgShoppingCart className="text-xl" />
@@ -231,7 +236,7 @@ const Navbar = () => {
                   <Link
                     to="/login"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="block w-full text-center bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors"
+                    className="block w-full text-center bg-gradient-to-r from-orange-500 to-red-600  text-white py-3 rounded-lg font-semibold  transition-colors"
                   >
                     Login
                   </Link>

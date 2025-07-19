@@ -7,6 +7,8 @@ import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import DashboardPage from "./pages/DashboardPage";
 import AdminDashboard from "./pages/AdminDashboard";
+import TermsPage from "./pages/TermsPage";
+import PrivacyPage from "./pages/PrivacyPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import Footer from "./components/Footer";
@@ -74,6 +76,8 @@ const App = () => {
                     <Route path="/" element={<HomePage />} />
                     <Route path="/collections" element={<CollectionsPage />} />
                     <Route path="/product/:slug" element={<ProductPage />} />
+                    <Route path="/terms" element={<TermsPage />} />
+                    <Route path="/privacy" element={<PrivacyPage />} />
                   </Routes>
                 </div>
               </main>
