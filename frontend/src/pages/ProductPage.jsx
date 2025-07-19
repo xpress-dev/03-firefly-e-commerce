@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   MdArrowBack,
   MdShoppingCart,
-  MdFavorite,
-  MdFavoriteBorder,
   MdShare,
   MdStar,
   MdStarBorder,
@@ -16,8 +15,12 @@ import {
   MdAdd,
   MdRemove,
   MdClose,
+  MdNavigateBefore,
+  MdNavigateNext,
 } from "react-icons/md";
 import useEcommerceStore from "../store/FireflyStore";
+import ReviewsSection from "../components/ReviewsSection";
+import FavoriteButton from "../components/FavoriteButton";
 
 const ProductPage = () => {
   const { slug } = useParams();
@@ -32,16 +35,35 @@ const ProductPage = () => {
     openCart,
     getProductBySlug,
     clearCurrentProduct,
+    reviewStats,
+    getProductReviewStats,
   } = useEcommerceStore();
 
   // Local state
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
-  const [isFavorited, setIsFavorited] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [activeTab, setActiveTab] = useState("description");
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    // Remove scroll to top behavior - let user stay where they are
+  };
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (showImageModal) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [showImageModal]);
 
   // Related products
   const [relatedProducts, setRelatedProducts] = useState([]);
@@ -49,12 +71,21 @@ const ProductPage = () => {
   useEffect(() => {
     if (slug) {
       getProductBySlug(slug);
+      // Scroll to top when product page loads
+      window.scrollTo(0, 0);
     }
 
     return () => {
       clearCurrentProduct();
     };
   }, [slug, getProductBySlug, clearCurrentProduct]);
+
+  // Load review stats when product changes
+  useEffect(() => {
+    if (currentProduct?._id) {
+      getProductReviewStats(currentProduct._id);
+    }
+  }, [currentProduct?._id, getProductReviewStats]);
 
   useEffect(() => {
     if (currentProduct && products.length > 0) {
@@ -131,6 +162,36 @@ const ProductPage = () => {
     }
   };
 
+  const handleImageModalClose = () => {
+    setShowImageModal(false);
+  };
+
+  const handleImageModalKeyDown = (e) => {
+    if (e.key === "Escape") {
+      setShowImageModal(false);
+    } else if (e.key === "ArrowLeft") {
+      handlePreviousImage();
+    } else if (e.key === "ArrowRight") {
+      handleNextImage();
+    }
+  };
+
+  const handlePreviousImage = () => {
+    if (currentProduct?.images && currentProduct.images.length > 1) {
+      setSelectedImage((prev) =>
+        prev === 0 ? currentProduct.images.length - 1 : prev - 1
+      );
+    }
+  };
+
+  const handleNextImage = () => {
+    if (currentProduct?.images && currentProduct.images.length > 1) {
+      setSelectedImage((prev) =>
+        prev === currentProduct.images.length - 1 ? 0 : prev + 1
+      );
+    }
+  };
+
   const renderStars = (rating = 4.5) => {
     const stars = [];
     const fullStars = Math.floor(rating);
@@ -155,13 +216,10 @@ const ProductPage = () => {
           <div className="animate-pulse">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div className="space-y-4">
-                <div className="aspect-square bg-gray-300 rounded-xl"></div>
+                <div className="bg-gray-300 rounded-xl"></div>
                 <div className="grid grid-cols-4 gap-2">
                   {[...Array(4)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="aspect-square bg-gray-300 rounded-lg"
-                    ></div>
+                    <div key={i} className="bg-gray-300 rounded-lg"></div>
                   ))}
                 </div>
               </div>
@@ -245,11 +303,11 @@ const ProductPage = () => {
           {/* Product Images */}
           <div className="space-y-4">
             {/* Main Image */}
-            <div className="relative aspect-square bg-white rounded-xl overflow-hidden shadow-sm group">
+            <div className="relative bg-white rounded-xl overflow-hidden shadow-sm group">
               <img
                 src={product.images[selectedImage] || "/placeholder-image.svg"}
                 alt={product.name}
-                className="w-full h-full object-cover cursor-zoom-in group-hover:scale-105 transition-transform duration-300"
+                className="w-full object-cover cursor-zoom-in group-hover:scale-105 transition-transform duration-300"
                 onClick={() => setShowImageModal(true)}
               />
               <button
@@ -267,7 +325,7 @@ const ProductPage = () => {
                   <button
                     key={index}
                     onClick={() => setSelectedImage(index)}
-                    className={`aspect-square bg-white rounded-lg overflow-hidden border-2 transition-colors ${
+                    className={`bg-white rounded-lg overflow-hidden border-2 transition-colors ${
                       selectedImage === index
                         ? "border-orange-500"
                         : "border-gray-200 hover:border-gray-300"
@@ -276,7 +334,7 @@ const ProductPage = () => {
                     <img
                       src={image}
                       alt={`${product.name} ${index + 1}`}
-                      className="w-full h-full object-cover"
+                      className="w-full object-cover"
                     />
                   </button>
                 ))}
@@ -293,16 +351,11 @@ const ProductPage = () => {
                   {product.name}
                 </h1>
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setIsFavorited(!isFavorited)}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                  >
-                    {isFavorited ? (
-                      <MdFavorite className="text-xl text-red-500" />
-                    ) : (
-                      <MdFavoriteBorder className="text-xl text-gray-400" />
-                    )}
-                  </button>
+                  <FavoriteButton
+                    productId={product._id}
+                    size="md"
+                    className="hover:bg-gray-100"
+                  />
                   <button
                     onClick={handleShare}
                     className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -313,8 +366,12 @@ const ProductPage = () => {
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="flex items-center">{renderStars(4.5)}</div>
-                <span className="text-sm text-gray-600">(127 reviews)</span>
+                <div className="flex items-center">
+                  {renderStars(reviewStats?.averageRating || 0)}
+                </div>
+                <span className="text-sm text-gray-600">
+                  ({reviewStats?.totalReviews || 0} reviews)
+                </span>
                 <span className="text-sm text-gray-400">•</span>
                 <span className="text-sm text-gray-600">
                   {product.category}
@@ -378,9 +435,9 @@ const ProductPage = () => {
                     <button
                       key={size}
                       onClick={() => setSelectedSize(size)}
-                      className={`px-4 py-2 border rounded-lg font-medium transition-colors ${
+                      className={`px-4 py-2 border-2 rounded-lg font-medium transition-colors ${
                         selectedSize === size
-                          ? "border-orange-500 bg-orange-500 text-white"
+                          ? "border-orange-500 bg-orange-50 text-orange-600"
                           : "border-gray-300 text-gray-700 hover:border-gray-400"
                       }`}
                     >
@@ -391,108 +448,86 @@ const ProductPage = () => {
               </div>
             )}
 
-            {/* Quantity Selection */}
+            {/* Quantity */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">
                 Quantity
               </h3>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center border border-gray-300 rounded-lg">
-                  <button
-                    onClick={() => handleQuantityChange(quantity - 1)}
-                    disabled={quantity <= 1}
-                    className="p-2 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <MdRemove />
-                  </button>
-                  <span className="px-4 py-2 font-medium min-w-[3rem] text-center">
-                    {quantity}
-                  </span>
-                  <button
-                    onClick={() => handleQuantityChange(quantity + 1)}
-                    disabled={quantity >= product.inventory}
-                    className="p-2 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <MdAdd />
-                  </button>
-                </div>
-                <span className="text-sm text-gray-600">
-                  {product.inventory} available
-                </span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => handleQuantityChange(quantity - 1)}
+                  disabled={quantity <= 1}
+                  className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <MdRemove />
+                </button>
+                <span className="w-12 text-center font-medium">{quantity}</span>
+                <button
+                  onClick={() => handleQuantityChange(quantity + 1)}
+                  disabled={quantity >= (product.inventory || 1)}
+                  className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <MdAdd />
+                </button>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="space-y-3">
-              <button
-                onClick={handleAddToCart}
-                disabled={
-                  isOutOfStock ||
-                  isAddingToCart ||
-                  (product.sizes?.length > 0 && !selectedSize)
-                }
-                className="w-full bg-orange-500 text-white py-4 rounded-lg font-semibold hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-              >
-                {isAddingToCart ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Adding to Cart...
-                  </>
-                ) : isOutOfStock ? (
-                  "Out of Stock"
-                ) : (
-                  <>
-                    <MdShoppingCart />
-                    Add to Cart
-                  </>
-                )}
-              </button>
+            {/* Add to Cart Button */}
+            <button
+              onClick={handleAddToCart}
+              disabled={isOutOfStock || isAddingToCart}
+              className="w-full bg-orange-500 text-white py-4 rounded-xl font-semibold hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isAddingToCart ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Adding to Cart...
+                </>
+              ) : isOutOfStock ? (
+                "Out of Stock"
+              ) : (
+                <>
+                  <MdShoppingCart className="text-xl" />
+                  Add to Cart
+                </>
+              )}
+            </button>
 
-              <button
-                disabled={isOutOfStock}
-                className="w-full border border-gray-300 text-gray-700 py-4 rounded-lg font-semibold hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Buy Now
-              </button>
-            </div>
-
-            {/* Product Features */}
+            {/* Features */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 border-t">
-              <div className="flex items-center gap-3 text-sm">
-                <MdLocalShipping className="text-xl text-green-600" />
+              <div className="flex items-center gap-3">
+                <MdLocalShipping className="text-2xl text-orange-500" />
                 <div>
-                  <div className="font-medium text-gray-900">Free Shipping</div>
-                  <div className="text-gray-600">On orders over $100</div>
+                  <h4 className="font-medium text-gray-900">Free Shipping</h4>
+                  <p className="text-sm text-gray-600">On orders over $100</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <MdSwapHoriz className="text-xl text-blue-600" />
+              <div className="flex items-center gap-3">
+                <MdSecurity className="text-2xl text-orange-500" />
                 <div>
-                  <div className="font-medium text-gray-900">Easy Returns</div>
-                  <div className="text-gray-600">30-day return policy</div>
+                  <h4 className="font-medium text-gray-900">Secure Payment</h4>
+                  <p className="text-sm text-gray-600">100% secure checkout</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <MdSecurity className="text-xl text-purple-600" />
+              <div className="flex items-center gap-3">
+                <MdSwapHoriz className="text-2xl text-orange-500" />
                 <div>
-                  <div className="font-medium text-gray-900">
-                    Secure Payment
-                  </div>
-                  <div className="text-gray-600">SSL encrypted</div>
+                  <h4 className="font-medium text-gray-900">Easy Returns</h4>
+                  <p className="text-sm text-gray-600">30-day return policy</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Product Details Tabs */}
-        <div className="mt-16">
+        {/* Product Tabs */}
+        <div className="mt-16 bg-white rounded-xl shadow-sm">
           <div className="border-b border-gray-200">
-            <div className="flex space-x-8">
+            <div className="flex space-x-8 px-6">
               {["description", "specifications", "reviews"].map((tab) => (
                 <button
                   key={tab}
-                  onClick={() => setActiveTab(tab)}
+                  onClick={() => handleTabChange(tab)}
                   className={`py-4 px-1 border-b-2 font-medium text-sm capitalize transition-colors ${
                     activeTab === tab
                       ? "border-orange-500 text-orange-600"
@@ -505,7 +540,7 @@ const ProductPage = () => {
             </div>
           </div>
 
-          <div className="py-8">
+          <div className="p-8 tab-content">
             {activeTab === "description" && (
               <div className="prose max-w-none">
                 <p className="text-gray-600 leading-relaxed">
@@ -612,118 +647,7 @@ const ProductPage = () => {
             )}
 
             {activeTab === "reviews" && (
-              <div>
-                <div className="flex items-center justify-between mb-6">
-                  <h4 className="text-xl font-semibold text-gray-900">
-                    Customer Reviews
-                  </h4>
-                  <button className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors">
-                    Write a Review
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-6 mb-8 p-6 bg-gray-50 rounded-lg">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-gray-900">4.5</div>
-                    <div className="flex items-center justify-center mt-1">
-                      {renderStars(4.5)}
-                    </div>
-                    <div className="text-sm text-gray-600 mt-1">
-                      Based on 127 reviews
-                    </div>
-                  </div>
-
-                  <div className="flex-1 space-y-2">
-                    {[5, 4, 3, 2, 1].map((rating) => (
-                      <div key={rating} className="flex items-center gap-3">
-                        <span className="text-sm w-8">{rating}★</span>
-                        <div className="flex-1 bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-yellow-400 h-2 rounded-full"
-                            style={{
-                              width: `${
-                                rating === 5
-                                  ? 60
-                                  : rating === 4
-                                  ? 25
-                                  : rating === 3
-                                  ? 10
-                                  : rating === 2
-                                  ? 3
-                                  : 2
-                              }%`,
-                            }}
-                          ></div>
-                        </div>
-                        <span className="text-sm text-gray-600 w-8">
-                          {rating === 5
-                            ? 76
-                            : rating === 4
-                            ? 32
-                            : rating === 3
-                            ? 13
-                            : rating === 2
-                            ? 4
-                            : 2}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  {/* Sample Reviews */}
-                  {[
-                    {
-                      name: "Sarah M.",
-                      rating: 5,
-                      date: "2 days ago",
-                      review:
-                        "Absolutely love this product! The quality is outstanding and it fits perfectly. Highly recommend!",
-                    },
-                    {
-                      name: "Mike R.",
-                      rating: 4,
-                      date: "1 week ago",
-                      review:
-                        "Great quality and fast shipping. Only wish there were more color options available.",
-                    },
-                    {
-                      name: "Emma L.",
-                      rating: 5,
-                      date: "2 weeks ago",
-                      review:
-                        "Exceeded my expectations. Will definitely be ordering more items from this brand.",
-                    },
-                  ].map((review, index) => (
-                    <div key={index} className="border-b border-gray-200 pb-6">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
-                            <span className="text-sm font-medium">
-                              {review.name.charAt(0)}
-                            </span>
-                          </div>
-                          <div>
-                            <div className="font-medium text-gray-900">
-                              {review.name}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="flex">
-                                {renderStars(review.rating)}
-                              </div>
-                              <span className="text-sm text-gray-600">
-                                {review.date}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-gray-600">{review.review}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <ReviewsSection productId={currentProduct?._id} />
             )}
           </div>
         </div>
@@ -741,11 +665,11 @@ const ProductPage = () => {
                   to={`/product/${relatedProduct.slug}`}
                   className="group bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden"
                 >
-                  <div className="aspect-square overflow-hidden">
+                  <div className="overflow-hidden">
                     <img
                       src={relatedProduct.images[0] || "/placeholder-image.svg"}
                       alt={relatedProduct.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   </div>
                   <div className="p-4">
@@ -763,37 +687,93 @@ const ProductPage = () => {
         )}
       </div>
 
-      {/* Image Modal */}
-      {showImageModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
-          <div className="relative max-w-4xl max-h-full">
-            <button
-              onClick={() => setShowImageModal(false)}
-              className="absolute top-4 right-4 bg-white/20 backdrop-blur-sm text-white p-2 rounded-full hover:bg-white/30 transition-colors z-10"
-            >
-              <MdClose className="text-xl" />
-            </button>
-            <img
-              src={product.images[selectedImage] || "/placeholder-image.svg"}
-              alt={product.name}
-              className="max-w-full max-h-full object-contain"
-            />
-            {product.images && product.images.length > 1 && (
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
-                {product.images.map((_, index) => (
+      {/* Enhanced Image Modal */}
+      <AnimatePresence>
+        {showImageModal && (
+          <motion.div
+            className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={handleImageModalClose}
+            onKeyDown={handleImageModalKeyDown}
+            tabIndex={-1}
+          >
+            <div className="relative max-w-6xl max-h-full w-full h-full flex items-center justify-center">
+              {/* Close Button */}
+              <button
+                onClick={handleImageModalClose}
+                className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm text-white p-3 rounded-full hover:bg-black/90 transition-colors z-20 shadow-lg"
+              >
+                <MdClose className="text-2xl" />
+              </button>
+
+              {/* Navigation Buttons */}
+              {product.images && product.images.length > 1 && (
+                <>
                   <button
-                    key={index}
-                    onClick={() => setSelectedImage(index)}
-                    className={`w-3 h-3 rounded-full transition-colors ${
-                      selectedImage === index ? "bg-white" : "bg-white/50"
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePreviousImage();
+                    }}
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/70 backdrop-blur-sm text-white p-3 rounded-full hover:bg-black/90 transition-colors z-20 shadow-lg"
+                  >
+                    <MdNavigateBefore className="text-2xl" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleNextImage();
+                    }}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/70 backdrop-blur-sm text-white p-3 rounded-full hover:bg-black/90 transition-colors z-20 shadow-lg"
+                  >
+                    <MdNavigateNext className="text-2xl" />
+                  </button>
+                </>
+              )}
+
+              {/* Main Image */}
+              <motion.img
+                src={product.images[selectedImage] || "/placeholder-image.svg"}
+                alt={product.name}
+                className="max-w-full max-h-full object-contain"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                onClick={(e) => e.stopPropagation()}
+              />
+
+              {/* Image Counter */}
+              {product.images && product.images.length > 1 && (
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium z-20">
+                  {selectedImage + 1} / {product.images.length}
+                </div>
+              )}
+
+              {/* Thumbnail Dots */}
+              {product.images && product.images.length > 1 && (
+                <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 flex gap-2 z-20">
+                  {product.images.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedImage(index);
+                      }}
+                      className={`w-3 h-3 rounded-full transition-colors ${
+                        selectedImage === index
+                          ? "bg-white"
+                          : "bg-white/50 hover:bg-white/75"
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

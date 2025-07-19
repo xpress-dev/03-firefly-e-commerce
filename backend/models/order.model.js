@@ -33,11 +33,26 @@ const orderItemSchema = new mongoose.Schema({
 
 // Define Shipping Address Schema
 const shippingAddressSchema = new mongoose.Schema({
+  firstName: {
+    type: String,
+    required: true,
+  },
+  lastName: {
+    type: String,
+    required: true,
+  },
   address: {
     type: String,
     required: true,
   },
+  addressLine2: {
+    type: String,
+  },
   city: {
+    type: String,
+    required: true,
+  },
+  state: {
     type: String,
     required: true,
   },

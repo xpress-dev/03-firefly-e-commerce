@@ -1,4 +1,11 @@
-import { useEffect, useState } from "react";
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+  useReducer,
+  useMemo,
+} from "react";
 import {
   MdSearch,
   MdFilterList,
@@ -14,12 +21,57 @@ import ProductsGrid from "../components/ProductsGrid";
 import PriceRangeFilter from "../components/PriceRangeFilter";
 import SortDropdown from "../components/SortDropdown";
 
+// Filter state reducer
+const filterReducer = (state, action) => {
+  switch (action.type) {
+    case "SET_SEARCH":
+      return { ...state, search: action.payload };
+    case "SET_FILTER":
+      return { ...state, [action.filterType]: action.value };
+    case "SET_PRICE_RANGE":
+      return {
+        ...state,
+        minPrice: action.payload.minPrice,
+        maxPrice: action.payload.maxPrice,
+      };
+    case "CLEAR_ALL":
+      return {
+        search: "",
+        category: "",
+        gender: "",
+        minPrice: "",
+        maxPrice: "",
+        inStock: null,
+      };
+    case "SYNC_WITH_STORE":
+      return {
+        search: action.payload.search || "",
+        category: action.payload.category || "",
+        gender: action.payload.gender || "",
+        minPrice: action.payload.minPrice || "",
+        maxPrice: action.payload.maxPrice || "",
+        inStock: action.payload.inStock ?? null,
+      };
+    default:
+      return state;
+  }
+};
+
+const initialFilterState = {
+  search: "",
+  category: "",
+  gender: "",
+  minPrice: "",
+  maxPrice: "",
+  inStock: null,
+};
+
 const CollectionsPage = () => {
   const {
     products,
     productsLoading,
     productsError,
-    filters,
+    filters: storeFilters,
     pagination,
     getAllProducts,
     setFilters,
@@ -27,8 +79,13 @@ const CollectionsPage = () => {
     setPagination,
   } = useEcommerceStore();
 
-  // Local state for UI
-  const [searchTerm, setSearchTerm] = useState(filters.search || "");
+  // Use reducer for local filter state
+  const [localFilters, dispatchFilter] = useReducer(
+    filterReducer,
+    initialFilterState
+  );
+
+  // Other local state
   const [isGridView, setIsGridView] = useState(true);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [expandedFilters, setExpandedFilters] = useState({
@@ -38,55 +95,35 @@ const CollectionsPage = () => {
     stock: false,
   });
   const [sortBy, setSortBy] = useState("newest");
-  const [priceRange, setPriceRange] = useState({
-    min: filters.minPrice || "",
-    max: filters.maxPrice || "",
-  });
 
-  // Filter options
-  const categories = ["Shirt", "T-Shirt", "Trouser", "Shoes", "Jacket", "Suit"];
-  const genders = ["Men", "Women", "Unisex"];
-  const sortOptions = [
-    { value: "newest", label: "Newest First" },
-    { value: "oldest", label: "Oldest First" },
-    { value: "price-low", label: "Price: Low to High" },
-    { value: "price-high", label: "Price: High to Low" },
-    { value: "name-asc", label: "Name: A to Z" },
-    { value: "name-desc", label: "Name: Z to A" },
-  ];
+  // Ref to track if we've already loaded products initially
+  const hasInitiallyLoaded = useRef(false);
+  const debounceTimerRef = useRef(null);
 
-  // Load products function
-  const loadProducts = async () => {
-    try {
-      const params = {
-        ...filters,
-        page: pagination.page,
-        limit: pagination.limit,
-        sort: getSortParams(sortBy),
-      };
-      await getAllProducts(params);
-    } catch (error) {
-      console.error("Error loading products:", error);
-    }
-  };
+  // Filter options - memoized to prevent unnecessary re-renders
+  const categories = useMemo(
+    () => ["Shirt", "T-Shirt", "Trouser", "Shoes", "Jacket", "Suit"],
+    []
+  );
+  const genders = useMemo(() => ["Men", "Women", "Unisex"], []);
+  const sortOptions = useMemo(
+    () => [
+      { value: "newest", label: "Newest First" },
+      { value: "oldest", label: "Oldest First" },
+      { value: "price-low", label: "Price: Low to High" },
+      { value: "price-high", label: "Price: High to Low" },
+      { value: "name-asc", label: "Name: A to Z" },
+      { value: "name-desc", label: "Name: Z to A" },
+    ],
+    []
+  );
 
-  // Load products on component mount
+  // Sync local filters with store filters on component mount
   useEffect(() => {
-    loadProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    dispatchFilter({ type: "SYNC_WITH_STORE", payload: storeFilters });
+  }, []); // Only run once on mount
 
-  // Load products when filters or pagination change
-  useEffect(() => {
-    const delayedSearch = setTimeout(() => {
-      loadProducts();
-    }, 500);
-
-    return () => clearTimeout(delayedSearch);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, pagination.page, sortBy]);
-
-  const getSortParams = (sortValue) => {
+  const getSortParams = useCallback((sortValue) => {
     switch (sortValue) {
       case "newest":
         return "-createdAt";
@@ -103,233 +140,318 @@ const CollectionsPage = () => {
       default:
         return "-createdAt";
     }
-  };
+  }, []);
 
-  const handleSearchChange = (e) => {
+  // Load products function - memoized to prevent re-creation on every render
+  const loadProducts = useCallback(async () => {
+    try {
+      const params = {
+        ...storeFilters,
+        page: pagination.page,
+        limit: pagination.limit,
+        sort: getSortParams(sortBy),
+      };
+      await getAllProducts(params);
+    } catch (error) {
+      console.error("Error loading products:", error);
+    }
+  }, [
+    storeFilters,
+    pagination.page,
+    pagination.limit,
+    sortBy,
+    getAllProducts,
+    getSortParams,
+  ]);
+
+  // Effect to sync local filters with store and trigger product loading
+  useEffect(() => {
+    // Clear any existing debounce timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // For initial load, sync immediately
+    if (!hasInitiallyLoaded.current) {
+      hasInitiallyLoaded.current = true;
+      setFilters(localFilters);
+      return;
+    }
+
+    // Check if filters have actually changed
+    const filtersChanged =
+      localFilters.search !== storeFilters.search ||
+      localFilters.category !== storeFilters.category ||
+      localFilters.gender !== storeFilters.gender ||
+      localFilters.minPrice !== storeFilters.minPrice ||
+      localFilters.maxPrice !== storeFilters.maxPrice ||
+      localFilters.inStock !== storeFilters.inStock;
+
+    if (!filtersChanged) return;
+
+    // Determine if this is a search operation
+    const isSearchUpdate = localFilters.search !== storeFilters.search;
+    const delay = isSearchUpdate ? 500 : 0;
+
+    debounceTimerRef.current = setTimeout(() => {
+      setFilters(localFilters);
+    }, delay);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [localFilters, setFilters, storeFilters]);
+
+  // Effect to load products when store filters change
+  useEffect(() => {
+    if (hasInitiallyLoaded.current) {
+      loadProducts();
+    }
+  }, [loadProducts]);
+
+  // Handler functions using reducer - memoized to prevent re-creation
+  const handleSearchChange = useCallback((e) => {
     const value = e.target.value;
-    setSearchTerm(value);
-    setFilters({ search: value });
-  };
+    dispatchFilter({ type: "SET_SEARCH", payload: value });
+  }, []);
 
-  const handleFilterChange = (filterType, value) => {
-    setFilters({ [filterType]: value });
-    // Reset to first page when filters change
-    setPagination({ page: 1 });
-  };
+  const handleFilterChange = useCallback(
+    (filterType, value) => {
+      dispatchFilter({ type: "SET_FILTER", filterType, value });
+      // Reset to first page when filters change
+      setPagination({ page: 1 });
+    },
+    [setPagination]
+  );
 
-  const handleClearFilters = () => {
+  const handlePriceRangeChange = useCallback(
+    (newRange) => {
+      dispatchFilter({
+        type: "SET_PRICE_RANGE",
+        payload: {
+          minPrice: newRange.minPrice,
+          maxPrice: newRange.maxPrice,
+        },
+      });
+      setPagination({ page: 1 });
+    },
+    [setPagination]
+  );
+
+  const handleClearFilters = useCallback(() => {
+    // Clear both local and store filters
+    dispatchFilter({ type: "CLEAR_ALL" });
     clearFilters();
-    setSearchTerm("");
-    setPriceRange({ min: "", max: "" });
     setSortBy("newest");
     setPagination({ page: 1 });
-  };
+  }, [clearFilters, setPagination]);
 
-  const handlePageChange = (newPage) => {
-    setPagination({ page: newPage });
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  const handlePageChange = useCallback(
+    (newPage) => {
+      setPagination({ page: newPage });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    [setPagination]
+  );
 
-  const toggleFilterExpansion = (filterType) => {
+  const toggleFilterExpansion = useCallback((filterType) => {
     setExpandedFilters((prev) => ({
       ...prev,
       [filterType]: !prev[filterType],
     }));
-  };
+  }, []);
 
-  const getActiveFiltersCount = () => {
+  const getActiveFiltersCount = useCallback(() => {
     let count = 0;
-    if (filters.category) count++;
-    if (filters.gender) count++;
-    if (filters.minPrice || filters.maxPrice) count++;
-    if (filters.search) count++;
-    if (filters.inStock !== null) count++;
+    if (localFilters.category) count++;
+    if (localFilters.gender) count++;
+    if (localFilters.minPrice || localFilters.maxPrice) count++;
+    if (localFilters.search) count++;
+    if (localFilters.inStock !== null) count++;
     return count;
-  };
+  }, [localFilters]);
 
-  // Filter Component
-  const FilterSection = ({ isMobile = false }) => (
-    <div className={`${isMobile ? "p-6 space-y-6" : "space-y-6"}`}>
-      {/* Search Filter */}
-      <div className="space-y-3">
-        <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-          <MdSearch className="text-lg" />
-          Search Products
-        </h3>
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Search products..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-          />
-          <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-        </div>
-      </div>
-
-      {/* Category Filter */}
-      <div className="space-y-3">
-        <button
-          onClick={() => toggleFilterExpansion("category")}
-          className="w-full flex items-center justify-between font-semibold text-gray-900 cursor-pointer"
-        >
-          <span className="flex items-center gap-2">
-            <MdFilterList className="text-lg" />
-            Category
-          </span>
-          {expandedFilters.category ? <MdExpandLess /> : <MdExpandMore />}
-        </button>
-        {expandedFilters.category && (
-          <div className="space-y-2 pl-6">
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="radio"
-                name="category"
-                value=""
-                checked={filters.category === ""}
-                onChange={(e) => handleFilterChange("category", e.target.value)}
-                className="text-orange-500 focus:ring-orange-500"
-              />
-              <span className="text-gray-700">All Categories</span>
-            </label>
-            {categories.map((category) => (
-              <label
-                key={category}
-                className="flex items-center space-x-2 cursor-pointer"
+  // Memoized Filter Component to prevent unnecessary re-renders
+  const FilterSection = useMemo(
+    () =>
+      ({ isMobile = false }) =>
+        (
+          <div className={`${isMobile ? "p-6 space-y-6" : "space-y-6"}`}>
+            {/* Category Filter */}
+            <div className="space-y-3">
+              <button
+                onClick={() => toggleFilterExpansion("category")}
+                className="w-full flex items-center justify-between font-semibold text-gray-900 cursor-pointer"
               >
-                <input
-                  type="radio"
-                  name="category"
-                  value={category}
-                  checked={filters.category === category}
-                  onChange={(e) =>
-                    handleFilterChange("category", e.target.value)
-                  }
-                  className="text-orange-500 focus:ring-orange-500"
-                />
-                <span className="text-gray-700">{category}</span>
-              </label>
-            ))}
-          </div>
-        )}
-      </div>
+                <span className="flex items-center gap-2">
+                  <MdFilterList className="text-lg" />
+                  Category
+                </span>
+                {expandedFilters.category ? <MdExpandLess /> : <MdExpandMore />}
+              </button>
+              {expandedFilters.category && (
+                <div className="space-y-2 pl-6">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="category"
+                      value=""
+                      checked={localFilters.category === ""}
+                      onChange={(e) =>
+                        handleFilterChange("category", e.target.value)
+                      }
+                      className="text-orange-500 focus:ring-orange-500"
+                    />
+                    <span className="text-gray-700">All Categories</span>
+                  </label>
+                  {categories.map((category) => (
+                    <label
+                      key={category}
+                      className="flex items-center space-x-2 cursor-pointer"
+                    >
+                      <input
+                        type="radio"
+                        name="category"
+                        value={category}
+                        checked={localFilters.category === category}
+                        onChange={(e) =>
+                          handleFilterChange("category", e.target.value)
+                        }
+                        className="text-orange-500 focus:ring-orange-500"
+                      />
+                      <span className="text-gray-700">{category}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
 
-      {/* Gender Filter */}
-      <div className="space-y-3">
-        <button
-          onClick={() => toggleFilterExpansion("gender")}
-          className="w-full flex items-center justify-between font-semibold text-gray-900 cursor-pointer"
-        >
-          <span>Gender</span>
-          {expandedFilters.gender ? <MdExpandLess /> : <MdExpandMore />}
-        </button>
-        {expandedFilters.gender && (
-          <div className="space-y-2 pl-6">
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="radio"
-                name="gender"
-                value=""
-                checked={filters.gender === ""}
-                onChange={(e) => handleFilterChange("gender", e.target.value)}
-                className="text-orange-500 focus:ring-orange-500"
-              />
-              <span className="text-gray-700">All Genders</span>
-            </label>
-            {genders.map((gender) => (
-              <label
-                key={gender}
-                className="flex items-center space-x-2 cursor-pointer"
+            {/* Gender Filter */}
+            <div className="space-y-3">
+              <button
+                onClick={() => toggleFilterExpansion("gender")}
+                className="w-full flex items-center justify-between font-semibold text-gray-900 cursor-pointer"
               >
-                <input
-                  type="radio"
-                  name="gender"
-                  value={gender}
-                  checked={filters.gender === gender}
-                  onChange={(e) => handleFilterChange("gender", e.target.value)}
-                  className="text-orange-500 focus:ring-orange-500"
-                />
-                <span className="text-gray-700">{gender}</span>
-              </label>
-            ))}
-          </div>
-        )}
-      </div>
+                <span>Gender</span>
+                {expandedFilters.gender ? <MdExpandLess /> : <MdExpandMore />}
+              </button>
+              {expandedFilters.gender && (
+                <div className="space-y-2 pl-6">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="gender"
+                      value=""
+                      checked={localFilters.gender === ""}
+                      onChange={(e) =>
+                        handleFilterChange("gender", e.target.value)
+                      }
+                      className="text-orange-500 focus:ring-orange-500"
+                    />
+                    <span className="text-gray-700">All Genders</span>
+                  </label>
+                  {genders.map((gender) => (
+                    <label
+                      key={gender}
+                      className="flex items-center space-x-2 cursor-pointer"
+                    >
+                      <input
+                        type="radio"
+                        name="gender"
+                        value={gender}
+                        checked={localFilters.gender === gender}
+                        onChange={(e) =>
+                          handleFilterChange("gender", e.target.value)
+                        }
+                        className="text-orange-500 focus:ring-orange-500"
+                      />
+                      <span className="text-gray-700">{gender}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
 
-      {/* Price Filter */}
-      <div className="space-y-3">
-        <button
-          onClick={() => toggleFilterExpansion("price")}
-          className="w-full flex items-center justify-between font-semibold text-gray-900 cursor-pointer"
-        >
-          <span>Price Range</span>
-          {expandedFilters.price ? <MdExpandLess /> : <MdExpandMore />}
-        </button>
-        {expandedFilters.price && (
-          <div className="pl-6">
-            <PriceRangeFilter
-              minPrice={priceRange.min}
-              maxPrice={priceRange.max}
-              onPriceChange={(newRange) => {
-                setPriceRange(newRange);
-                setFilters({
-                  minPrice: newRange.minPrice,
-                  maxPrice: newRange.maxPrice,
-                });
-                setPagination({ page: 1 });
-              }}
-            />
-          </div>
-        )}
-      </div>
+            {/* Price Filter */}
+            <div className="space-y-3">
+              <button
+                onClick={() => toggleFilterExpansion("price")}
+                className="w-full flex items-center justify-between font-semibold text-gray-900 cursor-pointer"
+              >
+                <span>Price Range</span>
+                {expandedFilters.price ? <MdExpandLess /> : <MdExpandMore />}
+              </button>
+              {expandedFilters.price && (
+                <div className="pl-6">
+                  <PriceRangeFilter
+                    minPrice={localFilters.minPrice}
+                    maxPrice={localFilters.maxPrice}
+                    onPriceChange={handlePriceRangeChange}
+                  />
+                </div>
+              )}
+            </div>
 
-      {/* Stock Filter */}
-      <div className="space-y-3">
-        <button
-          onClick={() => toggleFilterExpansion("stock")}
-          className="w-full flex items-center justify-between font-semibold text-gray-900 cursor-pointer"
-        >
-          <span>Availability</span>
-          {expandedFilters.stock ? <MdExpandLess /> : <MdExpandMore />}
-        </button>
-        {expandedFilters.stock && (
-          <div className="space-y-2 pl-6">
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="radio"
-                name="stock"
-                value=""
-                checked={filters.inStock === null}
-                onChange={() => handleFilterChange("inStock", null)}
-                className="text-orange-500 focus:ring-orange-500"
-              />
-              <span className="text-gray-700">All Products</span>
-            </label>
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="radio"
-                name="stock"
-                value="true"
-                checked={filters.inStock === true}
-                onChange={() => handleFilterChange("inStock", true)}
-                className="text-orange-500 focus:ring-orange-500"
-              />
-              <span className="text-gray-700">In Stock Only</span>
-            </label>
-          </div>
-        )}
-      </div>
+            {/* Stock Filter */}
+            <div className="space-y-3">
+              <button
+                onClick={() => toggleFilterExpansion("stock")}
+                className="w-full flex items-center justify-between font-semibold text-gray-900 cursor-pointer"
+              >
+                <span>Availability</span>
+                {expandedFilters.stock ? <MdExpandLess /> : <MdExpandMore />}
+              </button>
+              {expandedFilters.stock && (
+                <div className="space-y-2 pl-6">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="stock"
+                      value=""
+                      checked={localFilters.inStock === null}
+                      onChange={() => handleFilterChange("inStock", null)}
+                      className="text-orange-500 focus:ring-orange-500"
+                    />
+                    <span className="text-gray-700">All Products</span>
+                  </label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="stock"
+                      value="true"
+                      checked={localFilters.inStock === true}
+                      onChange={() => handleFilterChange("inStock", true)}
+                      className="text-orange-500 focus:ring-orange-500"
+                    />
+                    <span className="text-gray-700">In Stock Only</span>
+                  </label>
+                </div>
+              )}
+            </div>
 
-      {/* Clear Filters */}
-      <button
-        onClick={handleClearFilters}
-        className="w-full bg-gray-100 text-gray-700 py-3 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 cursor-pointer"
-      >
-        <MdClear />
-        Clear All Filters
-      </button>
-    </div>
+            {/* Clear Filters */}
+            <button
+              onClick={handleClearFilters}
+              className="w-full bg-gray-100 text-gray-700 py-3 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <MdClear />
+              Clear All Filters
+            </button>
+          </div>
+        ),
+    [
+      localFilters,
+      expandedFilters,
+      categories,
+      genders,
+      handleSearchChange,
+      handleFilterChange,
+      handlePriceRangeChange,
+      handleClearFilters,
+      toggleFilterExpansion,
+    ]
   );
 
   return (
@@ -434,6 +556,7 @@ const CollectionsPage = () => {
               products={products}
               isGridView={isGridView}
               loading={productsLoading}
+              onClearFilters={handleClearFilters}
             />
 
             {/* Error State */}
@@ -452,29 +575,11 @@ const CollectionsPage = () => {
               </div>
             )}
 
-            {/* No Results */}
-            {!productsLoading && !productsError && products.length === 0 && (
-              <div className="text-center py-16">
-                <div className="text-gray-400 text-6xl mb-4">🔍</div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  No Products Found
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  Try adjusting your filters or search terms to find what you're
-                  looking for.
-                </p>
-                <button
-                  onClick={handleClearFilters}
-                  className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition-colors cursor-pointer"
-                >
-                  Clear Filters
-                </button>
-              </div>
-            )}
-
             {/* Pagination */}
             {pagination.totalPages > 1 && (
-              <div className="mt-12 flex justify-center">
+              <div className="mt-8 flex justify-center">
+                {" "}
+                {/* Reduced margin */}
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => handlePageChange(pagination.page - 1)}
@@ -539,7 +644,7 @@ const CollectionsPage = () => {
       {showMobileFilters && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div
-            className="absolute inset-0 bg-black/50 bg-opacity-50"
+            className="absolute inset-0 bg-black/50"
             onClick={() => setShowMobileFilters(false)}
           />
           <div className="absolute right-0 top-0 h-full w-80 bg-white shadow-xl">

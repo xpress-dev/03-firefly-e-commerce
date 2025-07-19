@@ -15,8 +15,14 @@ import useEcommerceStore from "../store/FireflyStore";
 const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, authLoading, authError, isAuthenticated, clearAuthError } =
-    useEcommerceStore();
+  const {
+    login,
+    authLoading,
+    authError,
+    isAuthenticated,
+    clearAuthError,
+    user,
+  } = useEcommerceStore();
 
   const [formData, setFormData] = useState({
     email: "",
@@ -26,13 +32,33 @@ const LoginPage = () => {
   const [errors, setErrors] = useState({});
   const [rememberMe, setRememberMe] = useState(false);
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated (for page refreshes, etc.)
   useEffect(() => {
-    if (isAuthenticated) {
-      const from = location.state?.from?.pathname || "/dashboard";
-      navigate(from, { replace: true });
+    if (isAuthenticated && user && !authLoading) {
+      console.log("LoginPage: User already authenticated, role:", user.role);
+      const from = location.state?.from?.pathname;
+      let redirectTo = "/dashboard"; // default for regular users
+
+      // Check if user is admin and redirect accordingly
+      // Handle both string and array role formats
+      const userRole = Array.isArray(user.role) ? user.role[0] : user.role;
+      console.log("LoginPage: User role (processed):", userRole);
+
+      if (userRole === "admin") {
+        redirectTo = "/admin";
+        console.log("LoginPage: Admin user detected, redirecting to /admin");
+      }
+
+      // If there was an intended destination, use that instead (unless it's login/signup)
+      if (from && from !== "/login" && from !== "/signup") {
+        redirectTo = from;
+        console.log("LoginPage: Redirecting to intended destination:", from);
+      }
+
+      console.log("LoginPage: Final redirect destination:", redirectTo);
+      navigate(redirectTo, { replace: true });
     }
-  }, [isAuthenticated, navigate, location]);
+  }, [isAuthenticated, user, authLoading, navigate, location]);
 
   // Clear auth errors on mount
   useEffect(() => {
@@ -85,27 +111,47 @@ const LoginPage = () => {
 
     try {
       const response = await login(formData);
+      console.log("LoginPage: Login response:", response);
 
       // Store remember me preference
       if (rememberMe) {
         localStorage.setItem("rememberMe", "true");
       }
 
-      // Navigate based on user role and intended destination
-      const from = location.state?.from?.pathname;
-      let redirectTo = "/dashboard"; // default for regular users
+      // Handle redirect immediately after successful login
+      if (response?.success && response?.data) {
+        const userData = response.data;
+        console.log("LoginPage: User data from response:", userData);
+        console.log("LoginPage: User role:", userData.role);
 
-      // Check if user is admin and redirect accordingly
-      if (response?.data?.role === "admin") {
-        redirectTo = "/admin";
+        const from = location.state?.from?.pathname;
+        let redirectTo = "/dashboard"; // default for regular users
+
+        // Check if user is admin and redirect accordingly
+        // Handle both string and array role formats
+        const userRole = Array.isArray(userData.role)
+          ? userData.role[0]
+          : userData.role;
+        console.log("LoginPage: User role (processed):", userRole);
+
+        if (userRole === "admin") {
+          redirectTo = "/admin";
+          console.log("LoginPage: Admin user detected, redirecting to /admin");
+        } else {
+          console.log("LoginPage: Regular user, redirecting to /dashboard");
+        }
+
+        // If there was an intended destination, use that instead (unless it's login/signup)
+        if (from && from !== "/login" && from !== "/signup") {
+          redirectTo = from;
+          console.log("LoginPage: Redirecting to intended destination:", from);
+        }
+
+        console.log("LoginPage: Final redirect destination:", redirectTo);
+        navigate(redirectTo, { replace: true });
+      } else {
+        console.log("LoginPage: No valid response data for redirect");
       }
-
-      // If there was an intended destination, use that instead (unless it's login/signup)
-      if (from && from !== "/login" && from !== "/signup") {
-        redirectTo = from;
-      }
-
-      navigate(redirectTo, { replace: true });
     } catch (error) {
       console.error("Login error:", error);
     }

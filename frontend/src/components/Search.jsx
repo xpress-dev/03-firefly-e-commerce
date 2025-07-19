@@ -106,7 +106,7 @@ const Search = () => {
   if (!isSearchOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 bg-opacity-50">
+    <div className="fixed inset-0 z-50 bg-black/50">
       <div
         className="max-w-2xl mx-auto mt-20 bg-white rounded-xl shadow-2xl overflow-hidden"
         ref={searchRef}

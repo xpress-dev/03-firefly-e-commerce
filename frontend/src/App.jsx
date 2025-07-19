@@ -19,6 +19,9 @@ import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import Footer from "./components/Footer";
 import useEcommerceStore from "./store/FireflyStore";
 import { useEffect } from "react";
+import NotFound from "./pages/NotFound";
+import CheckoutPage from "./pages/CheckoutPage";
+import OrderConfirmationPage from "./pages/OrderConfirmationPage";
 
 const App = () => {
   const {
@@ -69,7 +72,6 @@ const App = () => {
             </AdminProtectedRoute>
           }
         />
-
         {/* Public Routes - With Navbar/Footer */}
         <Route
           path="/*"
@@ -88,6 +90,12 @@ const App = () => {
                     <Route path="/contact" element={<ContactPage />} />
                     <Route path="/terms" element={<TermsPage />} />
                     <Route path="/privacy" element={<PrivacyPage />} />
+                    <Route path="/checkout" element={<CheckoutPage />} />
+                    <Route
+                      path="/order/:orderId"
+                      element={<OrderConfirmationPage />}
+                    />
+                    <Route path="*" element={<NotFound />} />
                   </Routes>
                 </div>
               </main>

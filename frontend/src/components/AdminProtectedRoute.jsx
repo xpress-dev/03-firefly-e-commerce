@@ -8,7 +8,10 @@ const AdminProtectedRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (user.role !== "admin") {
+  // Handle both string and array role formats
+  const userRole = Array.isArray(user.role) ? user.role[0] : user.role;
+
+  if (userRole !== "admin") {
     return <Navigate to="/dashboard" replace />;
   }
 

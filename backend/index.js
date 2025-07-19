@@ -7,6 +7,9 @@ import productRoutes from "./routes/product.route.js";
 import authRoutes from "./routes/auth.route.js";
 import orderRoutes from "./routes/order.route.js";
 import adminRoutes from "./routes/admin.route.js";
+import addressRoutes from "./routes/address.route.js";
+import reviewRoutes from "./routes/review.route.js";
+import favoriteRoutes from "./routes/favorite.route.js";
 
 // DotENV Config Initilization
 dotenv.config();
@@ -62,6 +65,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/addresses", addressRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/favorites", favoriteRoutes);
 
 // Define PORT
 const PORT = process.env.PORT;

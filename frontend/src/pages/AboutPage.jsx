@@ -47,19 +47,19 @@ const AboutPage = () => {
     {
       name: "Sarah Johnson",
       role: "Founder & CEO",
-      image: "/placeholder-image.svg",
+      image: "/sarah-johnson.jpg",
       description: "Passionate about bringing quality fashion to everyone.",
     },
     {
       name: "Michael Chen",
       role: "Head of Design",
-      image: "/placeholder-image.svg",
+      image: "/michael-chen.jpg",
       description: "Creative visionary with 10+ years in fashion design.",
     },
     {
       name: "Emily Davis",
       role: "Customer Experience",
-      image: "/placeholder-image.svg",
+      image: "/emily-davis.jpg",
       description:
         "Dedicated to ensuring every customer has an amazing experience.",
     },

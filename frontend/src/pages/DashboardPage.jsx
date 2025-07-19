@@ -18,8 +18,16 @@ import {
   MdShoppingCart,
   MdReceipt,
   MdSecurity,
+  MdMenu,
+  MdClose,
+  MdArrowBack,
+  MdEmail,
+  MdPhone,
+  MdCalendarToday,
 } from "react-icons/md";
 import useEcommerceStore from "../store/FireflyStore";
+import AddressesManager from "../components/AddressesManager";
+import FavoritesPage from "./FavoritesPage";
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -34,6 +42,10 @@ const DashboardPage = () => {
     cartItemsCount,
     authLoading,
     resendVerificationEmail,
+    addresses,
+    getUserAddresses,
+    favoriteCount,
+    getFavoriteCount,
   } = useEcommerceStore();
 
   // Get tab from URL params or default to overview
@@ -42,6 +54,7 @@ const DashboardPage = () => {
 
   const [activeTab, setActiveTab] = useState(tabFromUrl);
   const [greeting, setGreeting] = useState("");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -49,15 +62,23 @@ const DashboardPage = () => {
       return;
     }
 
-    // Fetch user orders
+    // Fetch user orders, addresses, and favorite count
     getMyOrders();
+    getUserAddresses();
+    getFavoriteCount();
 
     // Set greeting based on time
     const hour = new Date().getHours();
     if (hour < 12) setGreeting("Good morning");
     else if (hour < 17) setGreeting("Good afternoon");
     else setGreeting("Good evening");
-  }, [isAuthenticated, navigate, getMyOrders]);
+  }, [
+    isAuthenticated,
+    navigate,
+    getMyOrders,
+    getUserAddresses,
+    getFavoriteCount,
+  ]);
 
   // Update active tab when URL changes
   useEffect(() => {
@@ -71,13 +92,22 @@ const DashboardPage = () => {
     navigate("/");
   };
 
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setIsMobileMenuOpen(false);
+    // Update URL without page reload
+    const newUrl = new URL(window.location);
+    newUrl.searchParams.set("tab", tab);
+    window.history.pushState({}, "", newUrl);
+  };
+
   const getOrderStats = () => {
     const stats = {
       total: myOrders.length,
-      pending: myOrders.filter((order) => order.status === "pending").length,
-      delivered: myOrders.filter((order) => order.status === "delivered")
+      pending: myOrders.filter((order) => order.status === "Pending").length,
+      delivered: myOrders.filter((order) => order.status === "Delivered")
         .length,
-      cancelled: myOrders.filter((order) => order.status === "cancelled")
+      cancelled: myOrders.filter((order) => order.status === "Cancelled")
         .length,
     };
     return stats;
@@ -97,24 +127,29 @@ const DashboardPage = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "processing":
-        return "bg-blue-100 text-blue-800";
-      case "shipped":
-        return "bg-purple-100 text-purple-800";
-      case "delivered":
-        return "bg-green-100 text-green-800";
-      case "cancelled":
-        return "bg-red-100 text-red-800";
+      case "Pending":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "Processing":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case "Shipped":
+        return "bg-purple-100 text-purple-800 border-purple-200";
+      case "Delivered":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "Cancelled":
+        return "bg-red-100 text-red-800 border-red-200";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
   const sidebarItems = [
     { id: "overview", label: "Overview", icon: MdDashboard },
     { id: "orders", label: "My Orders", icon: MdShoppingBag },
+    {
+      id: "favorites",
+      label: `Favorites (${favoriteCount})`,
+      icon: MdFavorite,
+    },
     { id: "profile", label: "Profile", icon: MdPerson },
     { id: "addresses", label: "Addresses", icon: MdLocationOn },
   ];
@@ -124,169 +159,197 @@ const DashboardPage = () => {
       title: "Track Order",
       description: "Track your recent orders",
       icon: MdLocalShipping,
-      action: () => setActiveTab("orders"),
-      color: "bg-blue-500",
+      action: () => handleTabChange("orders"),
+      color: "from-blue-500 to-blue-600",
+      bgColor: "bg-blue-50",
+      iconColor: "text-blue-600",
+    },
+    {
+      title: "My Favorites",
+      description: `${favoriteCount} saved products`,
+      icon: MdFavorite,
+      action: () => handleTabChange("favorites"),
+      color: "from-red-500 to-red-600",
+      bgColor: "bg-red-50",
+      iconColor: "text-red-600",
     },
     {
       title: "View Profile",
       description: "View your account details",
       icon: MdPerson,
-      action: () => setActiveTab("profile"),
-      color: "bg-green-500",
+      action: () => handleTabChange("profile"),
+      color: "from-green-500 to-green-600",
+      bgColor: "bg-green-50",
+      iconColor: "text-green-600",
+    },
+    {
+      title: "Manage Addresses",
+      description: "Add or edit delivery addresses",
+      icon: MdLocationOn,
+      action: () => handleTabChange("addresses"),
+      color: "from-purple-500 to-purple-600",
+      bgColor: "bg-purple-50",
+      iconColor: "text-purple-600",
     },
     {
       title: "View Cart",
       description: `${cartItemsCount} items in cart`,
       icon: MdShoppingCart,
       action: () => navigate("/collections"),
-      color: "bg-orange-500",
+      color: "from-orange-500 to-orange-600",
+      bgColor: "bg-orange-50",
+      iconColor: "text-orange-600",
     },
     {
-      title: "Browse Products",
-      description: "Discover new arrivals",
-      icon: MdTrendingUp,
+      title: "Continue Shopping",
+      description: "Browse our products",
+      icon: MdShoppingBag,
       action: () => navigate("/collections"),
-      color: "bg-purple-500",
+      color: "from-indigo-500 to-indigo-600",
+      bgColor: "bg-indigo-50",
+      iconColor: "text-indigo-600",
     },
   ];
 
   const renderOverview = () => (
     <div className="space-y-6">
       {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-orange-500 to-red-600 text-white p-6 rounded-xl">
-        <h2 className="text-2xl font-bold mb-2">
-          {greeting}, {user?.name}! 👋
-        </h2>
-        <p className="text-orange-100">
-          Welcome back to your dashboard. Here's what's happening with your
-          account.
-        </p>
+      <div className="bg-gradient-to-r from-orange-500 via-red-500 to-orange-600 text-white p-6 lg:p-8 rounded-2xl shadow-lg">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl lg:text-3xl font-bold mb-2">
+              {greeting}, {user?.name}! 👋
+            </h2>
+            <p className="text-orange-100 text-lg">
+              Welcome back to your dashboard. Here's what's happening with your
+              account.
+            </p>
+          </div>
+          <div className="hidden lg:block">
+            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+              <span className="text-2xl font-bold">
+                {user?.name?.charAt(0) || "U"}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Email Verification Notice */}
       {user && !user.isEmailVerified && (
-        <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl">
+        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 p-6 rounded-2xl shadow-sm">
           <div className="flex items-start">
             <div className="flex-shrink-0">
-              <svg
-                className="h-5 w-5 text-yellow-400 mt-0.5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
+              <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                <MdEmail className="text-yellow-600 text-xl" />
+              </div>
             </div>
-            <div className="ml-3 flex-1">
-              <h3 className="text-sm font-medium text-yellow-800">
+            <div className="ml-4 flex-1">
+              <h3 className="text-lg font-semibold text-yellow-800 mb-2">
                 Email Verification Required
               </h3>
-              <p className="mt-1 text-sm text-yellow-700">
+              <p className="text-yellow-700 mb-4">
                 Please verify your email address to place orders. Check your
                 inbox for a verification email.
               </p>
-              <div className="mt-3">
-                <button
-                  onClick={async () => {
-                    try {
-                      await resendVerificationEmail();
-                      alert(
-                        "Verification email sent! Please check your inbox."
-                      );
-                    } catch (error) {
-                      alert(
-                        error.message || "Failed to send verification email."
-                      );
-                    }
-                  }}
-                  disabled={authLoading}
-                  className="text-sm bg-yellow-100 text-yellow-800 hover:bg-yellow-200 px-3 py-1 rounded-md font-medium transition-colors disabled:opacity-50"
-                >
-                  {authLoading ? "Sending..." : "Resend Verification Email"}
-                </button>
-              </div>
+              <button
+                onClick={async () => {
+                  try {
+                    await resendVerificationEmail();
+                    alert("Verification email sent! Please check your inbox.");
+                  } catch (error) {
+                    alert(
+                      error.message || "Failed to send verification email."
+                    );
+                  }
+                }}
+                disabled={authLoading}
+                className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-yellow-600 hover:to-orange-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+              >
+                {authLoading ? "Sending..." : "Resend Verification Email"}
+              </button>
             </div>
           </div>
         </div>
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-sm border">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300">
           <div className="flex items-center justify-between mb-4">
-            <div className="bg-blue-100 p-3 rounded-lg">
-              <MdShoppingBag className="text-xl text-blue-600" />
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-3 rounded-xl">
+              <MdShoppingBag className="text-2xl text-white" />
             </div>
-            <span className="text-2xl font-bold text-gray-900">
+            <span className="text-3xl font-bold text-gray-900">
               {getOrderStats().total}
             </span>
           </div>
-          <h3 className="font-semibold text-gray-900">Total Orders</h3>
-          <p className="text-sm text-gray-600">All time purchases</p>
+          <h3 className="font-semibold text-gray-900 text-lg">Total Orders</h3>
+          <p className="text-gray-600">All time purchases</p>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300">
           <div className="flex items-center justify-between mb-4">
-            <div className="bg-green-100 p-3 rounded-lg">
-              <MdReceipt className="text-xl text-green-600" />
+            <div className="bg-gradient-to-r from-green-500 to-green-600 p-3 rounded-xl">
+              <MdReceipt className="text-2xl text-white" />
             </div>
-            <span className="text-2xl font-bold text-gray-900">
+            <span className="text-3xl font-bold text-gray-900">
               ${getTotalSpent().toFixed(2)}
             </span>
           </div>
-          <h3 className="font-semibold text-gray-900">Total Spent</h3>
-          <p className="text-sm text-gray-600">Lifetime value</p>
+          <h3 className="font-semibold text-gray-900 text-lg">Total Spent</h3>
+          <p className="text-gray-600">Lifetime value</p>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300">
           <div className="flex items-center justify-between mb-4">
-            <div className="bg-orange-100 p-3 rounded-lg">
-              <MdShoppingCart className="text-xl text-orange-600" />
+            <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-3 rounded-xl">
+              <MdShoppingCart className="text-2xl text-white" />
             </div>
-            <span className="text-2xl font-bold text-gray-900">
+            <span className="text-3xl font-bold text-gray-900">
               {cartItemsCount}
             </span>
           </div>
-          <h3 className="font-semibold text-gray-900">Cart Items</h3>
-          <p className="text-sm text-gray-600">Ready to checkout</p>
+          <h3 className="font-semibold text-gray-900 text-lg">Cart Items</h3>
+          <p className="text-gray-600">Ready to checkout</p>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300">
           <div className="flex items-center justify-between mb-4">
-            <div className="bg-purple-100 p-3 rounded-lg">
-              <MdStar className="text-xl text-purple-600" />
+            <div className="bg-gradient-to-r from-red-500 to-red-600 p-3 rounded-xl">
+              <MdFavorite className="text-2xl text-white" />
             </div>
-            <span className="text-2xl font-bold text-gray-900">4.8</span>
+            <span className="text-3xl font-bold text-gray-900">
+              {favoriteCount}
+            </span>
           </div>
-          <h3 className="font-semibold text-gray-900">Member Rating</h3>
-          <p className="text-sm text-gray-600">Customer satisfaction</p>
+          <h3 className="font-semibold text-gray-900 text-lg">Favorites</h3>
+          <p className="text-gray-600">Saved products</p>
         </div>
       </div>
 
       {/* Quick Actions */}
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+          <div className="w-8 h-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-full"></div>
           Quick Actions
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {quickActions.map((action, index) => (
             <button
               key={index}
               onClick={action.action}
-              className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-shadow text-left group"
+              className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 text-left group hover:scale-105"
             >
               <div
-                className={`inline-flex p-3 rounded-lg ${action.color} text-white mb-4 group-hover:scale-110 transition-transform`}
+                className={`inline-flex p-3 rounded-xl ${action.bgColor} mb-4 group-hover:scale-110 transition-transform`}
               >
-                <action.icon className="text-xl" />
+                <action.icon className={`text-2xl ${action.iconColor}`} />
               </div>
-              <h4 className="font-semibold text-gray-900 mb-1">
+              <h4 className="font-semibold text-gray-900 text-lg mb-2">
                 {action.title}
               </h4>
-              <p className="text-sm text-gray-600">{action.description}</p>
+              <p className="text-gray-600">{action.description}</p>
             </button>
           ))}
         </div>
@@ -294,24 +357,27 @@ const DashboardPage = () => {
 
       {/* Recent Orders */}
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Recent Orders</h3>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+            <div className="w-8 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+            Recent Orders
+          </h3>
           <button
-            onClick={() => setActiveTab("orders")}
-            className="text-orange-600 hover:text-orange-500 text-sm font-medium"
+            onClick={() => handleTabChange("orders")}
+            className="text-orange-600 hover:text-orange-500 text-sm font-semibold hover:underline transition-colors"
           >
             View All
           </button>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           {ordersLoading ? (
-            <div className="p-8 text-center">
-              <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading orders...</p>
+            <div className="p-12 text-center">
+              <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-600 text-lg">Loading orders...</p>
             </div>
           ) : getRecentOrders().length > 0 ? (
-            <div className="divide-y divide-gray-200">
+            <div className="divide-y divide-gray-100">
               {getRecentOrders().map((order) => (
                 <div
                   key={order._id}
@@ -319,24 +385,24 @@ const DashboardPage = () => {
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-semibold text-gray-900">
+                      <p className="font-semibold text-gray-900 text-lg">
                         Order #{order._id.slice(-8)}
                       </p>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-gray-600 flex items-center gap-2 mt-1">
+                        <MdCalendarToday className="text-sm" />
                         {new Date(order.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-gray-900">
-                        ${order.totalAmount.toFixed(2)}
+                      <p className="font-bold text-gray-900 text-lg">
+                        ${order.totalPrice.toFixed(2)}
                       </p>
                       <span
-                        className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                        className={`inline-block px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(
                           order.status
                         )}`}
                       >
-                        {order.status.charAt(0).toUpperCase() +
-                          order.status.slice(1)}
+                        {order.status}
                       </span>
                     </div>
                   </div>
@@ -344,12 +410,12 @@ const DashboardPage = () => {
               ))}
             </div>
           ) : (
-            <div className="p-8 text-center">
-              <MdShoppingBag className="text-4xl text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600 mb-4">No orders yet</p>
+            <div className="p-12 text-center">
+              <MdShoppingBag className="text-6xl text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-600 text-lg mb-6">No orders yet</p>
               <Link
                 to="/collections"
-                className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition-colors"
+                className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-3 rounded-xl font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-200 shadow-md"
               >
                 Start Shopping
               </Link>
@@ -363,10 +429,10 @@ const DashboardPage = () => {
   const renderOrders = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">My Orders</h2>
+        <h2 className="text-3xl font-bold text-gray-900">My Orders</h2>
         <Link
           to="/collections"
-          className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
+          className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-200 shadow-md"
         >
           Shop More
         </Link>
@@ -374,117 +440,78 @@ const DashboardPage = () => {
 
       {/* Order Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg border text-center">
-          <div className="text-2xl font-bold text-gray-900">
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center shadow-sm">
+          <div className="text-3xl font-bold text-gray-900 mb-2">
             {getOrderStats().total}
           </div>
-          <div className="text-sm text-gray-600">Total</div>
+          <div className="text-gray-600 font-medium">Total</div>
         </div>
-        <div className="bg-white p-4 rounded-lg border text-center">
-          <div className="text-2xl font-bold text-yellow-600">
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center shadow-sm">
+          <div className="text-3xl font-bold text-yellow-600 mb-2">
             {getOrderStats().pending}
           </div>
-          <div className="text-sm text-gray-600">Pending</div>
+          <div className="text-gray-600 font-medium">Pending</div>
         </div>
-        <div className="bg-white p-4 rounded-lg border text-center">
-          <div className="text-2xl font-bold text-green-600">
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center shadow-sm">
+          <div className="text-3xl font-bold text-green-600 mb-2">
             {getOrderStats().delivered}
           </div>
-          <div className="text-sm text-gray-600">Delivered</div>
+          <div className="text-gray-600 font-medium">Delivered</div>
         </div>
-        <div className="bg-white p-4 rounded-lg border text-center">
-          <div className="text-2xl font-bold text-red-600">
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 text-center shadow-sm">
+          <div className="text-3xl font-bold text-red-600 mb-2">
             {getOrderStats().cancelled}
           </div>
-          <div className="text-sm text-gray-600">Cancelled</div>
+          <div className="text-gray-600 font-medium">Cancelled</div>
         </div>
       </div>
 
       {/* Orders List */}
-      <div className="bg-white rounded-xl shadow-sm border">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
         {ordersLoading ? (
-          <div className="p-8 text-center">
-            <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading orders...</p>
+          <div className="p-12 text-center">
+            <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600 text-lg">Loading orders...</p>
           </div>
         ) : myOrders.length > 0 ? (
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-gray-100">
             {myOrders.map((order) => (
               <div key={order._id} className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className="font-semibold text-gray-900">
+                    <h3 className="font-semibold text-gray-900 text-lg">
                       Order #{order._id.slice(-8)}
                     </h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-gray-600 flex items-center gap-2 mt-1">
+                      <MdCalendarToday className="text-sm" />
                       Ordered on{" "}
                       {new Date(order.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-gray-900">
-                      ${order.totalAmount.toFixed(2)}
+                    <p className="font-bold text-gray-900 text-lg">
+                      ${order.totalPrice.toFixed(2)}
                     </p>
                     <span
-                      className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
+                      className={`inline-block px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(
                         order.status
                       )}`}
                     >
-                      {order.status.charAt(0).toUpperCase() +
-                        order.status.slice(1)}
+                      {order.status}
                     </span>
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  {order.items?.slice(0, 2).map((item, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-3 text-sm text-gray-600"
-                    >
-                      <span>•</span>
-                      <span>{item.productName || `Product ${index + 1}`}</span>
-                      <span>x{item.quantity}</span>
-                    </div>
-                  ))}
-                  {order.items?.length > 2 && (
-                    <p className="text-sm text-gray-500">
-                      + {order.items.length - 2} more items
-                    </p>
-                  )}
-                </div>
-
-                <div className="mt-4 flex gap-2">
-                  <button className="text-orange-600 hover:text-orange-500 text-sm font-medium">
-                    View Details
-                  </button>
-                  {order.status === "delivered" && (
-                    <button className="text-green-600 hover:text-green-500 text-sm font-medium">
-                      Write Review
-                    </button>
-                  )}
-                  {order.status === "pending" && (
-                    <button className="text-red-600 hover:text-red-500 text-sm font-medium">
-                      Cancel Order
-                    </button>
-                  )}
-                </div>
+                {/* Order items would go here */}
               </div>
             ))}
           </div>
         ) : (
           <div className="p-12 text-center">
             <MdShoppingBag className="text-6xl text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              No orders yet
-            </h3>
-            <p className="text-gray-600 mb-6">
-              You haven't placed any orders yet. Start shopping to see your
-              orders here.
-            </p>
+            <p className="text-gray-600 text-lg mb-6">No orders yet</p>
             <Link
               to="/collections"
-              className="bg-orange-500 text-white px-8 py-3 rounded-lg hover:bg-orange-600 transition-colors"
+              className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-3 rounded-xl font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-200 shadow-md"
             >
               Start Shopping
             </Link>
@@ -495,249 +522,189 @@ const DashboardPage = () => {
   );
 
   const renderProfile = () => {
-    const memberSince = user?.createdAt
-      ? new Date(user.createdAt).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
-      : "Not available";
-
-    const totalOrdersCount = myOrders?.length || 0;
-    const completedOrders =
-      myOrders?.filter((order) => order.status === "Delivered")?.length || 0;
-    const totalSpent =
-      myOrders?.reduce((sum, order) => sum + (order.totalAmount || 0), 0) || 0;
-
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <MdPerson className="text-orange-500" />
-          Account Profile
-        </h2>
-
-        {/* Profile Header Card */}
-        <div className="bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl p-6">
-          <div className="flex items-center space-x-4">
-            <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-              <MdPerson className="text-3xl text-white" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold">{user?.name || "User"}</h3>
-              <p className="text-orange-100">
-                {user?.email || "No email provided"}
-              </p>
-              <div className="flex items-center gap-2 mt-2">
-                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                <span className="text-sm text-orange-100">Active Member</span>
-              </div>
-            </div>
-          </div>
+        <div className="flex items-center justify-between">
+          <h2 className="text-3xl font-bold text-gray-900">Profile</h2>
+          <button className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-200 shadow-md flex items-center gap-2">
+            <MdEdit />
+            Edit Profile
+          </button>
         </div>
 
-        {/* Account Information */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Personal Information */}
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <MdPerson className="text-orange-500" />
-              Personal Information
-            </h3>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">
-                  Full Name
-                </label>
-                <div className="text-gray-900 font-medium">
-                  {user?.name || "Not provided"}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Profile Card */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <div className="text-center mb-6">
+                <div className="w-24 h-24 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center text-white text-3xl font-bold mx-auto mb-4">
+                  {user?.name?.charAt(0) || "U"}
                 </div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  {user?.name}
+                </h3>
+                <p className="text-gray-600">{user?.email}</p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">
-                  Email Address
-                </label>
-                <div className="text-gray-900 font-medium">
-                  {user?.email || "Not provided"}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                  <MdEmail className="text-gray-500" />
+                  <div>
+                    <p className="text-sm text-gray-600">Email</p>
+                    <p className="font-medium text-gray-900">{user?.email}</p>
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">
-                  Account Type
-                </label>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      user?.role === "admin"
-                        ? "bg-purple-100 text-purple-700"
-                        : "bg-blue-100 text-blue-700"
-                    }`}
-                  >
-                    {user?.role === "admin" ? "Administrator" : "Customer"}
-                  </span>
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                  <MdPhone className="text-gray-500" />
+                  <div>
+                    <p className="text-sm text-gray-600">Phone</p>
+                    <p className="font-medium text-gray-900">
+                      {user?.phone || "Not provided"}
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">
-                  Member Since
-                </label>
-                <div className="text-gray-900 font-medium">{memberSince}</div>
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                  <MdCalendarToday className="text-gray-500" />
+                  <div>
+                    <p className="text-sm text-gray-600">Member Since</p>
+                    <p className="font-medium text-gray-900">
+                      {user?.createdAt
+                        ? new Date(user.createdAt).toLocaleDateString()
+                        : "N/A"}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Account Statistics */}
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <MdTrendingUp className="text-orange-500" />
-              Account Statistics
-            </h3>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <MdReceipt className="text-blue-500" />
-                  <span className="text-gray-700">Total Orders</span>
+          {/* Account Stats */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                Account Statistics
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                      <MdShoppingBag className="text-white" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-blue-900">
+                        {getOrderStats().total}
+                      </p>
+                      <p className="text-blue-700 font-medium">Total Orders</p>
+                    </div>
+                  </div>
                 </div>
-                <span className="font-semibold text-gray-900">
-                  {totalOrdersCount}
-                </span>
-              </div>
 
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <MdLocalShipping className="text-green-500" />
-                  <span className="text-gray-700">Completed Orders</span>
+                <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
+                      <MdReceipt className="text-white" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-green-900">
+                        ${getTotalSpent().toFixed(2)}
+                      </p>
+                      <p className="text-green-700 font-medium">Total Spent</p>
+                    </div>
+                  </div>
                 </div>
-                <span className="font-semibold text-gray-900">
-                  {completedOrders}
-                </span>
-              </div>
 
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <MdPayment className="text-orange-500" />
-                  <span className="text-gray-700">Total Spent</span>
+                <div className="p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
+                      <MdFavorite className="text-white" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-orange-900">
+                        {favoriteCount}
+                      </p>
+                      <p className="text-orange-700 font-medium">Favorites</p>
+                    </div>
+                  </div>
                 </div>
-                <span className="font-semibold text-gray-900">
-                  ${totalSpent.toFixed(2)}
-                </span>
-              </div>
 
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <MdShoppingCart className="text-purple-500" />
-                  <span className="text-gray-700">Items in Cart</span>
-                </div>
-                <span className="font-semibold text-gray-900">
-                  {cartItemsCount}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Account Status & Security */}
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <MdSecurity className="text-orange-500" />
-            Account Security & Status
-          </h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <h4 className="font-medium text-gray-900">Account Status</h4>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">Account Active</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">Email Verified</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">
-                    Regular Customer
-                  </span>
+                <div className="p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
+                      <MdLocationOn className="text-white" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-purple-900">
+                        {addresses.length}
+                      </p>
+                      <p className="text-purple-700 font-medium">Addresses</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-3">
-              <h4 className="font-medium text-gray-900">
+            {/* Security Information */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
                 Security Information
-              </h4>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">
-                    Secure Password Set
-                  </span>
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <MdSecurity className="text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        Email Verification
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {user?.isEmailVerified ? "Verified" : "Not verified"}
+                      </p>
+                    </div>
+                  </div>
+                  <div
+                    className={`w-3 h-3 rounded-full ${
+                      user?.isEmailVerified ? "bg-green-500" : "bg-red-500"
+                    }`}
+                  ></div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">
-                    Two-Factor Authentication: Disabled
-                  </span>
+
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <MdSecurity className="text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        Password Security
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Secure password set
+                      </p>
+                    </div>
+                  </div>
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">
-                    Account Recovery Enabled
-                  </span>
+
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                      <MdSecurity className="text-orange-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        Two-Factor Authentication
+                      </p>
+                      <p className="text-sm text-gray-600">Disabled</p>
+                    </div>
+                  </div>
+                  <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <MdSettings className="text-orange-500" />
-            Quick Actions
-          </h3>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <button
-              onClick={() => setActiveTab("orders")}
-              className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left"
-            >
-              <MdHistory className="text-xl text-blue-500" />
-              <div>
-                <div className="font-medium text-gray-900">Order History</div>
-                <div className="text-sm text-gray-500">
-                  View all your orders
-                </div>
-              </div>
-            </button>
-
-            <Link
-              to="/collections"
-              className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left"
-            >
-              <MdShoppingBag className="text-xl text-green-500" />
-              <div>
-                <div className="font-medium text-gray-900">Shop Now</div>
-                <div className="text-sm text-gray-500">Browse our products</div>
-              </div>
-            </Link>
-
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-red-50 transition-colors text-left"
-            >
-              <MdLogout className="text-xl text-red-500" />
-              <div>
-                <div className="font-medium text-gray-900">Sign Out</div>
-                <div className="text-sm text-gray-500">Logout from account</div>
-              </div>
-            </button>
           </div>
         </div>
       </div>
@@ -748,15 +715,15 @@ const DashboardPage = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">
             Access Denied
           </h2>
-          <p className="text-gray-600 mb-6">
+          <p className="text-gray-600 mb-8 text-lg">
             Please sign in to access your dashboard.
           </p>
           <Link
             to="/login"
-            className="bg-orange-500 text-white px-6 py-3 rounded-lg hover:bg-orange-600 transition-colors"
+            className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-4 rounded-xl font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-200 shadow-md text-lg"
           >
             Sign In
           </Link>
@@ -771,14 +738,12 @@ const DashboardPage = () => {
         return renderOverview();
       case "orders":
         return renderOrders();
+      case "favorites":
+        return <FavoritesPage />;
       case "profile":
         return renderProfile();
       case "addresses":
-        return (
-          <div className="text-center py-12 text-gray-500">
-            Address management coming soon...
-          </div>
-        );
+        return <AddressesManager />;
       default:
         return renderOverview();
     }
@@ -786,31 +751,63 @@ const DashboardPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
+      {/* Mobile Header */}
+      <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              {isMobileMenuOpen ? (
+                <MdClose className="text-2xl" />
+              ) : (
+                <MdMenu className="text-2xl" />
+              )}
+            </button>
+            <div>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
+                Dashboard
+              </h1>
+              <p className="text-sm text-gray-600">
+                Welcome back, {user?.name}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <MdLogout className="text-xl text-gray-600" />
+          </button>
+        </div>
+      </div>
+
+      {/* Desktop Header */}
+      <div className="hidden lg:block bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
               <Link
                 to="/"
                 className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent"
               >
                 Firefly
               </Link>
-              <span className="ml-4 text-gray-400">|</span>
-              <span className="ml-4 text-gray-600">Dashboard</span>
+              <span className="text-gray-400">|</span>
+              <span className="text-gray-600 text-lg">Dashboard</span>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-6">
               <Link
                 to="/collections"
-                className="text-gray-600 hover:text-gray-900 transition-colors"
+                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
               >
                 Continue Shopping
               </Link>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 text-gray-600 hover:text-red-600 transition-colors"
+                className="flex items-center gap-2 text-gray-600 hover:text-red-600 transition-colors font-medium"
               >
                 <MdLogout />
                 Logout
@@ -820,42 +817,82 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex gap-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+        <div className="flex gap-6 lg:gap-8">
+          {/* Mobile Sidebar Overlay */}
+          {isMobileMenuOpen && (
+            <div
+              className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+              onClick={() => setIsMobileMenuOpen(false)}
+            />
+          )}
+
           {/* Sidebar */}
-          <div className="w-64 flex-shrink-0">
-            <div className="bg-white rounded-xl shadow-sm border p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                  {user?.name?.charAt(0) || "U"}
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900">{user?.name}</p>
-                  <p className="text-sm text-gray-600">Member</p>
+          <div
+            className={`fixed lg:relative inset-y-0 left-0 z-50 w-64 bg-white shadow-lg lg:shadow-none transform transition-transform duration-300 ease-in-out lg:transform-none ${
+              isMobileMenuOpen
+                ? "translate-x-0"
+                : "-translate-x-full lg:translate-x-0"
+            }`}
+          >
+            <div className="h-full flex flex-col">
+              {/* Mobile Sidebar Header */}
+              <div className="lg:hidden flex items-center justify-between p-4 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900">Menu</h2>
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <MdClose className="text-xl" />
+                </button>
+              </div>
+
+              {/* User Profile */}
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                    {user?.name?.charAt(0) || "U"}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">{user?.name}</p>
+                    <p className="text-sm text-gray-600">Member</p>
+                  </div>
                 </div>
               </div>
 
-              <nav className="space-y-2">
+              {/* Navigation */}
+              <nav className="flex-1 p-4 space-y-2">
                 {sidebarItems.map((item) => (
                   <button
                     key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                    onClick={() => handleTabChange(item.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 ${
                       activeTab === item.id
-                        ? "bg-orange-50 text-orange-600 border border-orange-200"
-                        : "text-gray-600 hover:bg-gray-50"
+                        ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                     }`}
                   >
                     <item.icon className="text-xl" />
-                    {item.label}
+                    <span className="font-medium">{item.label}</span>
                   </button>
                 ))}
               </nav>
+
+              {/* Mobile Sidebar Footer */}
+              <div className="lg:hidden p-4 border-t border-gray-200">
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                >
+                  <MdLogout className="text-xl" />
+                  <span className="font-medium">Logout</span>
+                </button>
+              </div>
             </div>
           </div>
 
           {/* Main Content */}
-          <div className="flex-1">{renderContent()}</div>
+          <div className="flex-1 min-w-0">{renderContent()}</div>
         </div>
       </div>
     </div>

@@ -79,6 +79,25 @@ const useEcommerceStore = create(
       ordersLoading: false,
       ordersError: null,
 
+      // ADDRESSES STATE
+      addresses: [],
+      defaultAddress: null,
+      addressesLoading: false,
+      addressesError: null,
+
+      // REVIEWS STATE
+      reviews: [],
+      reviewStats: null,
+      userReview: null,
+      reviewsLoading: false,
+      reviewsError: null,
+
+      // FAVORITES STATE
+      favorites: [],
+      favoritesLoading: false,
+      favoritesError: null,
+      favoriteCount: 0,
+
       // ADMIN STATE
       adminStats: {
         totalUsers: 0,
@@ -914,16 +933,456 @@ const useEcommerceStore = create(
         }
       },
 
+      // ADDRESS ACTIONS
+      getUserAddresses: async () => {
+        set({ addressesLoading: true, addressesError: null });
+        try {
+          const response = await apiCall("/addresses");
+          if (response.success) {
+            const addresses = response.data;
+            const defaultAddress = addresses.find((addr) => addr.isDefault);
+            set({
+              addresses,
+              defaultAddress,
+              addressesLoading: false,
+            });
+            return response;
+          }
+        } catch (error) {
+          set({ addressesError: error.message, addressesLoading: false });
+          throw error;
+        }
+      },
+
+      getDefaultAddress: async () => {
+        set({ addressesLoading: true, addressesError: null });
+        try {
+          const response = await apiCall("/addresses/default");
+          if (response.success) {
+            set({
+              defaultAddress: response.data,
+              addressesLoading: false,
+            });
+            return response;
+          }
+        } catch (error) {
+          set({ addressesError: error.message, addressesLoading: false });
+          throw error;
+        }
+      },
+
+      createAddress: async (addressData) => {
+        set({ addressesLoading: true, addressesError: null });
+        try {
+          const response = await apiCall("/addresses", {
+            method: "POST",
+            body: JSON.stringify(addressData),
+          });
+
+          if (response.success) {
+            set((state) => ({
+              addresses: [...state.addresses, response.data],
+              addressesLoading: false,
+            }));
+            return response;
+          }
+        } catch (error) {
+          set({ addressesError: error.message, addressesLoading: false });
+          throw error;
+        }
+      },
+
+      updateAddress: async (addressId, addressData) => {
+        set({ addressesLoading: true, addressesError: null });
+        try {
+          const response = await apiCall(`/addresses/${addressId}`, {
+            method: "PUT",
+            body: JSON.stringify(addressData),
+          });
+
+          if (response.success) {
+            set((state) => ({
+              addresses: state.addresses.map((addr) =>
+                addr._id === addressId ? response.data : addr
+              ),
+              defaultAddress: response.data.isDefault
+                ? response.data
+                : state.defaultAddress,
+              addressesLoading: false,
+            }));
+            return response;
+          }
+        } catch (error) {
+          set({ addressesError: error.message, addressesLoading: false });
+          throw error;
+        }
+      },
+
+      deleteAddress: async (addressId) => {
+        set({ addressesLoading: true, addressesError: null });
+        try {
+          const response = await apiCall(`/addresses/${addressId}`, {
+            method: "DELETE",
+          });
+
+          if (response.success) {
+            set((state) => ({
+              addresses: state.addresses.filter(
+                (addr) => addr._id !== addressId
+              ),
+              defaultAddress:
+                state.defaultAddress?._id === addressId
+                  ? null
+                  : state.defaultAddress,
+              addressesLoading: false,
+            }));
+            return response;
+          }
+        } catch (error) {
+          set({ addressesError: error.message, addressesLoading: false });
+          throw error;
+        }
+      },
+
+      setDefaultAddress: async (addressId) => {
+        set({ addressesLoading: true, addressesError: null });
+        try {
+          const response = await apiCall(
+            `/addresses/${addressId}/set-default`,
+            {
+              method: "PATCH",
+            }
+          );
+
+          if (response.success) {
+            set((state) => ({
+              addresses: state.addresses.map((addr) => ({
+                ...addr,
+                isDefault: addr._id === addressId,
+              })),
+              defaultAddress: response.data,
+              addressesLoading: false,
+            }));
+            return response;
+          }
+        } catch (error) {
+          set({ addressesError: error.message, addressesLoading: false });
+          throw error;
+        }
+      },
+
+      clearAddressesError: () => {
+        set({ addressesError: null });
+      },
+
+      // REVIEW ACTIONS
+      getProductReviews: async (productId, options = {}) => {
+        set({ reviewsLoading: true, reviewsError: null });
+        try {
+          const { page = 1, limit = 10, sort = "newest", rating } = options;
+          const params = new URLSearchParams({
+            page: page.toString(),
+            limit: limit.toString(),
+            sort,
+            ...(rating && { rating: rating.toString() }),
+          });
+
+          const response = await apiCall(
+            `/reviews/product/${productId}?${params}`
+          );
+          if (response.success) {
+            set({
+              reviews: response.data,
+              reviewsLoading: false,
+            });
+            return response;
+          }
+        } catch (error) {
+          set({ reviewsError: error.message, reviewsLoading: false });
+          throw error;
+        }
+      },
+
+      getProductReviewStats: async (productId) => {
+        set({ reviewsLoading: true, reviewsError: null });
+        try {
+          const response = await apiCall(`/reviews/product/${productId}/stats`);
+          if (response.success) {
+            set({
+              reviewStats: response.data,
+              reviewsLoading: false,
+            });
+            return response;
+          }
+        } catch (error) {
+          set({ reviewsError: error.message, reviewsLoading: false });
+          throw error;
+        }
+      },
+
+      getUserProductReview: async (productId) => {
+        set({ reviewsLoading: true, reviewsError: null });
+        try {
+          const response = await apiCall(`/reviews/product/${productId}/user`);
+          if (response.success) {
+            set({
+              userReview: response.data,
+              reviewsLoading: false,
+            });
+            return response;
+          }
+        } catch (error) {
+          set({ reviewsError: error.message, reviewsLoading: false });
+          throw error;
+        }
+      },
+
+      createReview: async (reviewData) => {
+        set({ reviewsLoading: true, reviewsError: null });
+        try {
+          const response = await apiCall("/reviews", {
+            method: "POST",
+            body: JSON.stringify(reviewData),
+          });
+
+          if (response.success) {
+            set((state) => ({
+              reviews: [response.data, ...state.reviews],
+              userReview: response.data,
+              reviewsLoading: false,
+            }));
+            return response;
+          }
+        } catch (error) {
+          set({ reviewsError: error.message, reviewsLoading: false });
+          throw error;
+        }
+      },
+
+      updateReview: async (reviewId, reviewData) => {
+        set({ reviewsLoading: true, reviewsError: null });
+        try {
+          const response = await apiCall(`/reviews/${reviewId}`, {
+            method: "PUT",
+            body: JSON.stringify(reviewData),
+          });
+
+          if (response.success) {
+            set((state) => ({
+              reviews: state.reviews.map((review) =>
+                review._id === reviewId ? response.data : review
+              ),
+              userReview: response.data,
+              reviewsLoading: false,
+            }));
+            return response;
+          }
+        } catch (error) {
+          set({ reviewsError: error.message, reviewsLoading: false });
+          throw error;
+        }
+      },
+
+      deleteReview: async (reviewId) => {
+        set({ reviewsLoading: true, reviewsError: null });
+        try {
+          const response = await apiCall(`/reviews/${reviewId}`, {
+            method: "DELETE",
+          });
+
+          if (response.success) {
+            set((state) => ({
+              reviews: state.reviews.filter(
+                (review) => review._id !== reviewId
+              ),
+              userReview: null,
+              reviewsLoading: false,
+            }));
+            return response;
+          }
+        } catch (error) {
+          set({ reviewsError: error.message, reviewsLoading: false });
+          throw error;
+        }
+      },
+
+      toggleReviewHelpful: async (reviewId) => {
+        set({ reviewsLoading: true, reviewsError: null });
+        try {
+          const response = await apiCall(`/reviews/${reviewId}/helpful`, {
+            method: "PATCH",
+          });
+
+          if (response.success) {
+            set((state) => ({
+              reviews: state.reviews.map((review) =>
+                review._id === reviewId ? response.data : review
+              ),
+              userReview:
+                state.userReview?._id === reviewId
+                  ? response.data
+                  : state.userReview,
+              reviewsLoading: false,
+            }));
+            return response;
+          }
+        } catch (error) {
+          set({ reviewsError: error.message, reviewsLoading: false });
+          throw error;
+        }
+      },
+
+      clearReviewsError: () => {
+        set({ reviewsError: null });
+      },
+
+      // FAVORITES ACTIONS
+      getUserFavorites: async (options = {}) => {
+        set({ favoritesLoading: true, favoritesError: null });
+        try {
+          const { page = 1, limit = 12 } = options;
+          const params = new URLSearchParams({
+            page: page.toString(),
+            limit: limit.toString(),
+          });
+
+          const response = await apiCall(`/favorites?${params}`);
+          if (response.success) {
+            set({
+              favorites: response.data,
+              favoritesLoading: false,
+            });
+            return response;
+          }
+        } catch (error) {
+          set({ favoritesError: error.message, favoritesLoading: false });
+          throw error;
+        }
+      },
+
+      addToFavorites: async (productId) => {
+        set({ favoritesLoading: true, favoritesError: null });
+        try {
+          const response = await apiCall("/favorites", {
+            method: "POST",
+            body: JSON.stringify({ productId }),
+          });
+
+          if (response.success) {
+            set((state) => ({
+              favorites: [response.data, ...state.favorites],
+              favoriteCount: state.favoriteCount + 1,
+              favoritesLoading: false,
+            }));
+            return response;
+          }
+        } catch (error) {
+          set({ favoritesError: error.message, favoritesLoading: false });
+          throw error;
+        }
+      },
+
+      removeFromFavorites: async (productId) => {
+        set({ favoritesLoading: true, favoritesError: null });
+        try {
+          const response = await apiCall(`/favorites/${productId}`, {
+            method: "DELETE",
+          });
+
+          if (response.success) {
+            set((state) => ({
+              favorites: state.favorites.filter(
+                (fav) => fav.product._id !== productId
+              ),
+              favoriteCount: Math.max(0, state.favoriteCount - 1),
+              favoritesLoading: false,
+            }));
+            return response;
+          }
+        } catch (error) {
+          set({ favoritesError: error.message, favoritesLoading: false });
+          throw error;
+        }
+      },
+
+      toggleFavorite: async (productId) => {
+        set({ favoritesLoading: true, favoritesError: null });
+        try {
+          const response = await apiCall(`/favorites/toggle/${productId}`, {
+            method: "PATCH",
+          });
+
+          if (response.success) {
+            if (response.data.isFavorited) {
+              // Added to favorites
+              set((state) => ({
+                favorites: [response.data.favorite, ...state.favorites],
+                favoriteCount: state.favoriteCount + 1,
+                favoritesLoading: false,
+              }));
+            } else {
+              // Removed from favorites
+              set((state) => ({
+                favorites: state.favorites.filter(
+                  (fav) => fav.product._id !== productId
+                ),
+                favoriteCount: Math.max(0, state.favoriteCount - 1),
+                favoritesLoading: false,
+              }));
+            }
+            return response;
+          }
+        } catch (error) {
+          set({ favoritesError: error.message, favoritesLoading: false });
+          throw error;
+        }
+      },
+
+      checkIfFavorited: async (productId) => {
+        try {
+          const response = await apiCall(`/favorites/check/${productId}`);
+          return response.success ? response.data.isFavorited : false;
+        } catch {
+          return false;
+        }
+      },
+
+      getFavoriteCount: async () => {
+        try {
+          const response = await apiCall("/favorites/count");
+          if (response.success) {
+            set({ favoriteCount: response.data.count });
+            return response.data.count;
+          }
+        } catch (error) {
+          console.error("Failed to get favorite count:", error);
+        }
+      },
+
+      clearFavoritesError: () => {
+        set({ favoritesError: null });
+      },
+
       // Initialize store with token from localStorage
       initializeAuth: () => {
         const token = localStorage.getItem("token");
         if (token) {
+          console.log("FireflyStore: Token found, initializing auth");
           set({ token, isAuthenticated: true });
-          // Optionally fetch user profile
+          // Fetch user profile to get role and other user data
           get()
             .getUserProfile()
+            .then((response) => {
+              console.log(
+                "FireflyStore: User profile loaded, role:",
+                response?.data?.role
+              );
+            })
             .catch(() => {
               // If profile fetch fails, clear auth state
+              console.log(
+                "FireflyStore: Failed to load user profile, clearing auth"
+              );
               get().logout();
             });
         }
