@@ -52,16 +52,6 @@ const Cart = () => {
     setTimeout(() => setIsAnimating(false), 300);
   };
 
-  // Auto-close cart when it becomes empty
-  useEffect(() => {
-    if (isCartOpen && cartItems.length === 0) {
-      const timer = setTimeout(() => {
-        closeCart();
-      }, 500); // Small delay to allow animation
-      return () => clearTimeout(timer);
-    }
-  }, [isCartOpen, cartItems.length, closeCart]);
-
   const handleRemoveItem = (itemId) => {
     setIsAnimating(true);
     removeFromCart(itemId);

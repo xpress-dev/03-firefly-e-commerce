@@ -31,13 +31,13 @@ const Footer = () => {
             Collections
           </Link>
           <Link
-            to="/"
+            to="/about"
             className="hover:text-orange-500 transition-colors cursor-pointer"
           >
             About Us
           </Link>
           <Link
-            to="/"
+            to="/contact"
             className="hover:text-orange-500 transition-colors cursor-pointer"
           >
             Contact Us

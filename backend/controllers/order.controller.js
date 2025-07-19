@@ -2,12 +2,22 @@
 import mongoose from "mongoose";
 import Order from "../models/order.model.js";
 import Product from "../models/product.model.js";
+import User from "../models/user.model.js";
 
 // @desc    Create new order
 // @route   POST /api/orders
 // @access  Private
 export const createOrder = async (req, res) => {
   try {
+    // Check if user's email is verified
+    const user = await User.findById(req.user._id);
+    if (!user.isEmailVerified) {
+      return res.status(403).json({
+        success: false,
+        message: "Please verify your email before placing orders",
+      });
+    }
+
     const { orderItems, shippingAddress, paymentMethod, notes } = req.body;
 
     // Validation

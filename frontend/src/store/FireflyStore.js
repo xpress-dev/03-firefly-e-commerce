@@ -191,6 +191,93 @@ const useEcommerceStore = create(
         }
       },
 
+      verifyEmail: async (token) => {
+        set({ authLoading: true, authError: null });
+        try {
+          const response = await apiCall("/auth/verify-email", {
+            method: "POST",
+            body: JSON.stringify({ token }),
+          });
+
+          if (response.success) {
+            // After successful verification, refresh the user profile
+            // to update the isEmailVerified status in the frontend
+            try {
+              const profileResponse = await apiCall("/auth/profile");
+              if (profileResponse.success) {
+                set({ user: profileResponse.data, authLoading: false });
+              } else {
+                set({ authLoading: false });
+              }
+            } catch (profileError) {
+              // Even if profile fetch fails, verification was successful
+              console.warn(
+                "Failed to refresh profile after verification:",
+                profileError
+              );
+              set({ authLoading: false });
+            }
+            return response;
+          }
+        } catch (error) {
+          set({ authError: error.message, authLoading: false });
+          throw error;
+        }
+      },
+
+      forgotPassword: async (email) => {
+        set({ authLoading: true, authError: null });
+        try {
+          const response = await apiCall("/auth/forgot-password", {
+            method: "POST",
+            body: JSON.stringify({ email }),
+          });
+
+          if (response.success) {
+            set({ authLoading: false });
+            return response;
+          }
+        } catch (error) {
+          set({ authError: error.message, authLoading: false });
+          throw error;
+        }
+      },
+
+      resetPassword: async (token, password) => {
+        set({ authLoading: true, authError: null });
+        try {
+          const response = await apiCall("/auth/reset-password", {
+            method: "POST",
+            body: JSON.stringify({ token, password }),
+          });
+
+          if (response.success) {
+            set({ authLoading: false });
+            return response;
+          }
+        } catch (error) {
+          set({ authError: error.message, authLoading: false });
+          throw error;
+        }
+      },
+
+      resendVerificationEmail: async () => {
+        set({ authLoading: true, authError: null });
+        try {
+          const response = await apiCall("/auth/resend-verification", {
+            method: "POST",
+          });
+
+          if (response.success) {
+            set({ authLoading: false });
+            return response;
+          }
+        } catch (error) {
+          set({ authError: error.message, authLoading: false });
+          throw error;
+        }
+      },
+
       // PRODUCTS ACTIONS
       getAllProducts: async (params = {}) => {
         set({ productsLoading: true, productsError: null });

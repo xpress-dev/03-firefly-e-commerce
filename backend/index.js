@@ -67,7 +67,26 @@ app.use("/api/admin", adminRoutes);
 const PORT = process.env.PORT;
 
 // Start Server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+  // Connect to database
   connectDB();
+
+  // Test email configuration in development
+  if (process.env.NODE_ENV === "development") {
+    try {
+      const { testEmailConfiguration } = await import(
+        "./utils/emailService.js"
+      );
+      const emailTest = await testEmailConfiguration();
+      if (emailTest.success) {
+        console.log("📧 Email service ready");
+      } else {
+        console.log("⚠️  Email service warning:", emailTest.message);
+      }
+    } catch (error) {
+      console.log("⚠️  Email service not configured:", error.message);
+    }
+  }
+
   console.log(`Server is listening on http://localhost:${PORT}`);
 });

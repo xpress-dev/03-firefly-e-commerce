@@ -194,6 +194,20 @@ const Navbar = () => {
               >
                 All Products
               </Link>
+              <Link
+                to="/about"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block w-full text-left p-3 hover:bg-gray-50 rounded-lg transition-colors"
+              >
+                About Us
+              </Link>
+              <Link
+                to="/contact"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block w-full text-left p-3 hover:bg-gray-50 rounded-lg transition-colors"
+              >
+                Contact Us
+              </Link>
 
               {/* Mobile Auth */}
               {isAuthenticated ? (
